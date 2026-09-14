@@ -177,6 +177,9 @@
   .summary-hero .technique { font-size: 1.5em; font-weight: 800; color: var(--accent2); }
 
   /* --- History --- */
+  .feedback-row { display: flex; gap: 8px; }
+  .feedback-row button { flex: 1; padding: 10px 4px; font-size: 0.85em; }
+
   .breakdown-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border); }
   .breakdown-row:last-child { border-bottom: none; }
   .breakdown-row .n { font-weight: 700; }
@@ -505,6 +508,15 @@
     <div class="card" style="text-align:center">
       <div class="setting-label" style="margin-bottom:2px">Gesamtdauer</div>
       <div style="font-size:1.3em; font-weight:700" id="summary-duration"></div>
+    </div>
+    <div class="card" style="text-align:center">
+      <div class="setting-label" style="margin-bottom:10px">Wie war die Session?</div>
+      <div class="feedback-row">
+        <button class="secondary" data-feedback="easy">Zu leicht</button>
+        <button class="secondary" data-feedback="ok">Passt genau</button>
+        <button class="secondary" data-feedback="hard">Zu schwer</button>
+      </div>
+      <p class="subtitle" id="feedback-result" style="margin:10px 0 0"></p>
     </div>
     <div style="flex:1"></div>
     <button class="primary" id="btn-summary-done">Fertig</button>
@@ -1078,10 +1090,39 @@
   });
 
   // ---------- Summary ----------
+  // Adaptive Rundenzahl: "Zu leicht/schwer" auf dem Summary-Screen passt
+  // techniqueRounds[id] (bzw. customPattern.rounds fuer "custom") direkt an
+  // - dieselbe Groesse, die auch die Home-Karten-Stepper schon bedienen, kein
+  // eigenes Datenmodell noetig. Bewusst nur die Rundenzahl, nicht einzelne
+  // Phasen-Sekunden: bliebe sonst die Technik selbst unveraendert erkennbar
+  // (Box bleibt 4-4-4-4), nur "wie oft" passt sich an.
+  var lastRecord = null;
+  function roundsBoundsFor(id) {
+    return id === 'custom' ? CUSTOM_STEPPER_META.rounds : ROUNDS_META[id];
+  }
+  function setRoundsFor(id, value) {
+    if (id === 'custom') settings.customPattern.rounds = value;
+    else settings.techniqueRounds[id] = value;
+  }
+  document.querySelectorAll('#screen-summary [data-feedback]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (!lastRecord) return;
+      var id = lastRecord.techniqueId;
+      var bounds = roundsBoundsFor(id);
+      var delta = btn.getAttribute('data-feedback') === 'easy' ? 1 : btn.getAttribute('data-feedback') === 'hard' ? -1 : 0;
+      var next = Math.max(bounds.min, Math.min(bounds.max, resolveTechnique(id).rounds + delta));
+      setRoundsFor(id, next);
+      persistSettings();
+      document.getElementById('feedback-result').textContent = 'Nächstes Mal ' + next + ' Runden.';
+    });
+  });
+
   function renderSummary(record) {
+    lastRecord = record;
     document.getElementById('summary-technique').textContent = techniqueLabel(record.techniqueId);
     document.getElementById('summary-rounds').textContent = record.completedRounds + ' / ' + record.plannedRounds;
     document.getElementById('summary-duration').textContent = formatDurationLong((record.endedAt - record.startedAt) / 1000);
+    document.getElementById('feedback-result').textContent = '';
   }
 
   // ---------- History ----------

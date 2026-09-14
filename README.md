@@ -182,8 +182,25 @@ braucht echten Geräte-Neustart-Test): siehe Abschnitt "Erinnerung" oben.
 Erste Stage, die über reines WebView-JS hinausgeht (JS-Bridge,
 AlarmManager, BroadcastReceiver, Laufzeit-Permission).
 
+**Stage 6 - Adaptive Rundenzahl** (gebaut, noch nicht geräte-getestet):
+siehe Abschnitt oben. Apnoe-/Atem-Anhalte-Training bewusst NICHT hier
+eingebaut - das ist architektonisch [ice-breath](../ice-breath)s Job (offene,
+nutzerbeendete Halte-Phasen + Bestzeiten-Tracking), nicht diese fest
+getaktete Engine.
+
 Audio ist als Nächstes dran, sobald es getestet werden kann (verschoben,
 weil beim Bauen "alle schlafen").
+
+## Adaptive Rundenzahl (Stage 6)
+
+Auf dem Summary-Screen fragt "Wie war die Session?" (zu leicht / passt genau
+/ zu schwer) nach jeder abgeschlossenen Session. Die Antwort verändert
+direkt `techniqueRounds[id]` (bzw. `customPattern.rounds` für "custom") um
+±1, geclampt an dieselben Grenzen wie die Home-Karten-Stepper
+(`ROUNDS_META` / `CUSTOM_STEPPER_META.rounds`) - kein eigenes Datenmodell,
+keine Historie/Glättung über mehrere Sessions, nur ein direkter Nudge fürs
+nächste Mal. Bewusst nur die Rundenzahl, nie einzelne Phasen-Sekunden -
+sonst würde z.B. Box Breathing selbst nicht mehr 4-4-4-4 sein.
 
 ## Kurse/Programme (Stage 5) - Brainstorm, noch nicht gebaut
 
