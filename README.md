@@ -122,14 +122,19 @@ Technik; Predictive-Back-Fix für die Zurück-Wischgeste (siehe
 **Stage 2 - mehr Techniken** (gebaut, noch nicht geräte-getestet): vier
 recherchierte, evidenzbasierte Techniken ergänzt - Physiological Sigh,
 Verlängertes Ausatmen, Wechselatmung, Bienenatmung (Details siehe
-"Technik-Engine" oben). Geplante Reihenfolge der nächsten Stages laut
-Nutzer: mehr Techniken (diese Stage) → Vibration → Audio → Reminder →
+"Technik-Engine" oben).
+
+**Stage 3 - Vibration** (gebaut, noch nicht geräte-getestet): kurzer Puls
+bei Einatmen/Ausatmen, doppelter Puls bei Halten-Phasen, langes Abschluss-
+Muster bei Session-Ende (`VIB`-Tabelle + `vibrateForPhase()`), per Toggle in
+den Einstellungen abschaltbar (Default an). Nutzt dieselbe
+`navigator.vibrate()`-API wie ice-breath.
+
+Geplante Reihenfolge der restlichen Stages laut Nutzer: Audio → Reminder →
 geführte Programme/Kurse.
 
 ## Bewusst zurückgestellt
 
 Audio-Cues/Sprachführung, geführte Programme/Kurse, ein Technik-Builder über
 die vier Zahlenfelder hinaus, Reminders/Benachrichtigungen, Wim Hof (das
-deckt ice-breath ab), Vibration (als nächste Stage geplant, siehe oben -
-VIBRATE-Permission ist durch das apk-builder-Template ohnehin schon gesetzt,
-aber noch ungenutzt).
+deckt ice-breath ab).

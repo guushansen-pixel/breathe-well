@@ -104,6 +104,14 @@
   .disclaimer-list { padding-left: 20px; }
   .disclaimer-list li { margin-bottom: 8px; }
 
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; }
+  .switch { position: relative; width: 50px; height: 28px; flex: none; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch .slider { position: absolute; inset: 0; background: var(--border); border-radius: 28px; cursor: pointer; transition: 0.15s; }
+  .switch .slider::before { content: ""; position: absolute; height: 22px; width: 22px; left: 3px; top: 3px; background: var(--fg); border-radius: 50%; transition: 0.15s; }
+  .switch input:checked + .slider { background: var(--accent); }
+  .switch input:checked + .slider::before { transform: translateX(22px); }
+
   /* --- Technique cards (Home) --- */
   .technique-card { position: relative; }
   .technique-card.last-used { border-color: var(--accent); }
@@ -408,6 +416,13 @@
     </div>
 
     <div class="card">
+      <div class="toggle-row">
+        <span>Vibration bei Phasenwechsel</span>
+        <label class="switch"><input type="checkbox" id="toggle-vibration"><span class="slider"></span></label>
+      </div>
+    </div>
+
+    <div class="card">
       <p style="margin:0">Diese App läuft komplett offline. Es werden keine
       Daten gesammelt, gespeichert ist alles ausschließlich lokal auf diesem
       Gerät.</p>
@@ -517,6 +532,7 @@
   var DEFAULT_SETTINGS = {
     theme: 'system',
     lastTechniqueId: null,
+    vibrationOn: true,
     techniqueRounds: { box: 6, fourSevenEight: 4, coherent: 10, physiologicalSigh: 5, extendedExhale: 8, alternateNostril: 8, bhramari: 6 },
     customPattern: { inhale: 4, hold1: 0, exhale: 6, hold2: 0, rounds: 8 }
   };
@@ -570,6 +586,22 @@
   function dayKeyToLocalDate(k) {
     var p = k.split('-').map(Number);
     return new Date(p[0], p[1] - 1, p[2]);
+  }
+
+  // ---------- Vibration ----------
+  function vibrate(pattern) {
+    if (!settings.vibrationOn) return;
+    if (!('vibrate' in navigator)) return;
+    try { navigator.vibrate(pattern); } catch (e) {}
+  }
+  var VIB = {
+    inhale: [40], holdStart: [150, 60, 150], exhale: [40],
+    sessionDone: [300, 120, 300, 120, 300, 120, 600]
+  };
+  function vibrateForPhase(phase) {
+    if (phase.key === 'inhale' || phase.key === 'inhale2') vibrate(VIB.inhale);
+    else if (phase.key === 'exhale') vibrate(VIB.exhale);
+    else vibrate(VIB.holdStart);
   }
 
   // ---------- Wake Lock (backup only; FLAG_KEEP_SCREEN_ON in MainActivity is primary) ----------
@@ -776,6 +808,7 @@
     }
     document.getElementById('phase-hint').textContent = hint;
     document.getElementById('pacer-circle').classList.toggle('empty', phase.visual === 'shrink' || phase.visual === 'hold-contracted');
+    vibrateForPhase(phase);
   }
 
   function tickActive() {
@@ -813,6 +846,7 @@
 
   function finishSession() {
     releaseWakeLock();
+    vibrate(VIB.sessionDone);
     var endedAt = Date.now();
     var record = {
       techniqueId: session.techniqueId,
@@ -949,7 +983,12 @@
     document.querySelectorAll('[data-theme-choice]').forEach(function (btn) {
       btn.classList.toggle('active', btn.getAttribute('data-theme-choice') === settings.theme);
     });
+    document.getElementById('toggle-vibration').checked = settings.vibrationOn;
   }
+  document.getElementById('toggle-vibration').addEventListener('change', function (e) {
+    settings.vibrationOn = e.target.checked;
+    persistSettings();
+  });
   document.querySelectorAll('[data-theme-choice]').forEach(function (btn) {
     btn.addEventListener('click', function () {
       settings.theme = btn.getAttribute('data-theme-choice');
