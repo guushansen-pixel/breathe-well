@@ -111,6 +111,10 @@
   .switch .slider::before { content: ""; position: absolute; height: 22px; width: 22px; left: 3px; top: 3px; background: var(--fg); border-radius: 50%; transition: 0.15s; }
   .switch input:checked + .slider { background: var(--accent); }
   .switch input:checked + .slider::before { transform: translateX(22px); }
+  input[type="time"] {
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; font-family: inherit; font-size: 1em;
+  }
 
   /* --- Technique cards (Home) --- */
   .technique-card { position: relative; }
@@ -328,6 +332,24 @@
       <button class="primary" data-start="bhramari">Starten</button>
     </div>
 
+    <div class="card technique-card" data-technique="bellows">
+      <span class="last-used-tag" style="display:none">Zuletzt</span>
+      <div class="tc-head">
+        <div class="tc-title">Bellows Breath</div>
+        <div class="tc-duration" id="tc-duration-bellows"></div>
+      </div>
+      <div class="tc-desc">Schnelles, kräftiges Ein-/Ausatmen (Bhastrika) &ndash; energetisiert und macht wach, statt zu beruhigen. Immer im Sitzen, bei Schwindel sofort abbrechen. Ein- und ausatmen durch die Nase.</div>
+      <div class="tc-rounds-row">
+        <span class="tc-rounds-label">Runden</span>
+        <div class="stepper compact">
+          <button data-round-step="bellows" data-dir="-1">&minus;</button>
+          <span class="value" id="tc-rounds-bellows">20</span>
+          <button data-round-step="bellows" data-dir="1">+</button>
+        </div>
+      </div>
+      <button class="primary" data-start="bellows">Starten</button>
+    </div>
+
     <div class="card technique-card" data-technique="custom">
       <span class="last-used-tag" style="display:none">Zuletzt</span>
       <div class="tc-head">
@@ -420,6 +442,18 @@
         <span>Vibration bei Phasenwechsel</span>
         <label class="switch"><input type="checkbox" id="toggle-vibration"><span class="slider"></span></label>
       </div>
+    </div>
+
+    <div class="card">
+      <div class="toggle-row">
+        <span>Tägliche Erinnerung</span>
+        <label class="switch"><input type="checkbox" id="toggle-reminder"><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row" id="reminder-time-row" style="display:none">
+        <span>Uhrzeit</span>
+        <input type="time" id="reminder-time" value="08:00">
+      </div>
+      <p class="subtitle" id="reminder-note" style="margin:8px 0 0"></p>
     </div>
 
     <div class="card">
@@ -533,7 +567,9 @@
     theme: 'system',
     lastTechniqueId: null,
     vibrationOn: true,
-    techniqueRounds: { box: 6, fourSevenEight: 4, coherent: 10, physiologicalSigh: 5, extendedExhale: 8, alternateNostril: 8, bhramari: 6 },
+    reminderOn: false,
+    reminderTime: '08:00',
+    techniqueRounds: { box: 6, fourSevenEight: 4, coherent: 10, physiologicalSigh: 5, extendedExhale: 8, alternateNostril: 8, bhramari: 6, bellows: 20 },
     customPattern: { inhale: 4, hold1: 0, exhale: 6, hold2: 0, rounds: 8 }
   };
   var settings = Object.assign({}, DEFAULT_SETTINGS, loadJSON('breathewell.settings.v1', {}));
@@ -602,6 +638,22 @@
     if (phase.key === 'inhale' || phase.key === 'inhale2') vibrate(VIB.inhale);
     else if (phase.key === 'exhale') vibrate(VIB.exhale);
     else vibrate(VIB.holdStart);
+  }
+
+  // ---------- Erinnerung (Bridge zu AndroidReminders, siehe MainActivity.java) ----------
+  // window.AndroidReminders existiert nur in der echten APK (addJavascriptInterface),
+  // nicht im Desktop-Browser - dort no-op, damit die Einstellungen trotzdem
+  // testbar bleiben (nur die tatsaechliche Benachrichtigung braucht das Geraet).
+  function applyReminderSchedule() {
+    if (!window.AndroidReminders) return;
+    try {
+      if (settings.reminderOn) {
+        var parts = settings.reminderTime.split(':').map(Number);
+        window.AndroidReminders.setReminder(parts[0], parts[1]);
+      } else {
+        window.AndroidReminders.cancelReminder();
+      }
+    } catch (e) {}
   }
 
   // ---------- Wake Lock (backup only; FLAG_KEEP_SCREEN_ON in MainActivity is primary) ----------
@@ -676,6 +728,7 @@
     extendedExhale: { inhale: 'nose', exhale: 'nose' },
     alternateNostril: { inhale: 'nose', exhale: 'nose' },
     bhramari: { inhale: 'nose', exhale: 'hum' },
+    bellows: { inhale: 'nose', exhale: 'nose' },
     custom: { inhale: 'both', exhale: 'both' }
   };
   function breathHint(verb, method) {
@@ -702,6 +755,7 @@
     extendedExhale: { id: 'extendedExhale', label: 'Verlängertes Ausatmen', seconds: { inhale: 4, hold1: 0, exhale: 8, hold2: 0 }, editable: false },
     alternateNostril: { id: 'alternateNostril', label: 'Wechselatmung', seconds: { inhale: 4, hold1: 2, exhale: 4, hold2: 0 }, editable: false, alternates: true },
     bhramari: { id: 'bhramari', label: 'Bienenatmung', seconds: { inhale: 4, hold1: 0, exhale: 6, hold2: 0 }, editable: false },
+    bellows: { id: 'bellows', label: 'Bellows Breath', seconds: { inhale: 1, hold1: 0, exhale: 1, hold2: 0 }, editable: false },
     custom: { id: 'custom', label: 'Eigenes Muster', seconds: null, editable: true }
   };
 
@@ -891,7 +945,7 @@
       ? '<div class="streak-badge">🔥 <span class="n">' + cur + '</span> Tage Streak</div>'
       : '';
 
-    ['box', 'fourSevenEight', 'coherent', 'physiologicalSigh', 'extendedExhale', 'alternateNostril', 'bhramari'].forEach(function (id) {
+    ['box', 'fourSevenEight', 'coherent', 'physiologicalSigh', 'extendedExhale', 'alternateNostril', 'bhramari', 'bellows'].forEach(function (id) {
       var tech = resolveTechnique(id);
       document.getElementById('tc-rounds-' + id).textContent = String(tech.rounds);
       document.getElementById('tc-duration-' + id).textContent = '≈ ' + formatClock(techniqueTotalSeconds(tech));
@@ -921,7 +975,8 @@
   var ROUNDS_META = {
     box: { min: 1, max: 20 }, fourSevenEight: { min: 1, max: 20 }, coherent: { min: 1, max: 30 },
     physiologicalSigh: { min: 1, max: 10 }, extendedExhale: { min: 1, max: 20 },
-    alternateNostril: { min: 2, max: 20 }, bhramari: { min: 1, max: 20 }
+    alternateNostril: { min: 2, max: 20 }, bhramari: { min: 1, max: 20 },
+    bellows: { min: 5, max: 40 }
   };
   document.querySelectorAll('[data-round-step]').forEach(function (btn) {
     btn.addEventListener('click', function () {
@@ -984,10 +1039,27 @@
       btn.classList.toggle('active', btn.getAttribute('data-theme-choice') === settings.theme);
     });
     document.getElementById('toggle-vibration').checked = settings.vibrationOn;
+    document.getElementById('toggle-reminder').checked = settings.reminderOn;
+    document.getElementById('reminder-time').value = settings.reminderTime;
+    document.getElementById('reminder-time-row').style.display = settings.reminderOn ? 'flex' : 'none';
+    document.getElementById('reminder-note').textContent = settings.reminderOn
+      ? 'Braucht einmalig deine Bestätigung für Benachrichtigungen.'
+      : 'Erinnert dich einmal täglich ans Üben.';
   }
   document.getElementById('toggle-vibration').addEventListener('change', function (e) {
     settings.vibrationOn = e.target.checked;
     persistSettings();
+  });
+  document.getElementById('toggle-reminder').addEventListener('change', function (e) {
+    settings.reminderOn = e.target.checked;
+    persistSettings();
+    applyReminderSchedule();
+    renderSettings();
+  });
+  document.getElementById('reminder-time').addEventListener('change', function (e) {
+    settings.reminderTime = e.target.value || '08:00';
+    persistSettings();
+    applyReminderSchedule();
   });
   document.querySelectorAll('[data-theme-choice]').forEach(function (btn) {
     btn.addEventListener('click', function () {

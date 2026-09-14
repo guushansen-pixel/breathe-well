@@ -15,8 +15,8 @@ cd "D:\claude code projects\breathe-well"
 ```
 
 Baut *nicht* direkt mit `apk-builder`s eigenen Skripten, sondern über den
-eigenen `build.ps1`-Wrapper, der nach dem Erzeugen des Projekts zwei Dinge
-nachpatcht, die apk-builder selbst nicht kann:
+eigenen `build.ps1`-Wrapper, der nach dem Erzeugen des Projekts alles
+nachpatcht/-kopiert, was apk-builder selbst nicht kann:
 
 - **Portrait-Lock** (`android:screenOrientation="portrait"` im Manifest) -
   eine Atem-Session soll bei Drehung nicht neu aufgebaut werden.
@@ -25,6 +25,12 @@ nachpatcht, die apk-builder selbst nicht kann:
   `WAKE_LOCK` keine Manifest-Permission. Zusätzlich fragt die Web-App selbst
   per `navigator.wakeLock` einen Screen-Wake-Lock an (Backup, falls der
   native Flag aus irgendeinem Grund nicht greift).
+- **Predictive-Back-Handler** für die Zurück-Wischgeste (Details siehe
+  [apk-builder/CLAUDE.md](../apk-builder/CLAUDE.md)).
+- **Tägliche Erinnerung**: kopiert `android-src/*.java`
+  (`ReminderScheduler`/`ReminderReceiver`/`BootReceiver`) ins generierte
+  Projekt und registriert eine JS-Bridge (`AndroidReminders`) - Details im
+  Abschnitt "Erinnerung" unten.
 
 `-VersionCode` bei jeder Auslieferung hochzählen, sonst sind zwei
 APK-Versionen für Android nicht unterscheidbar:
@@ -64,6 +70,9 @@ nach `inhale`, einzig für den Physiological Sigh gebraucht):
 - **Eigenes Muster**: `inhale`/`hold1`/`exhale`/`hold2` + Rundenzahl frei
   einstellbar (`settings.customPattern`; `inhale2` bewusst nicht im
   Custom-Editor, um das Formular einfach zu halten).
+- **Bellows Breath** (Bhastrika): 1s ein / 1s aus, 20 Runden - energetisierend
+  statt beruhigend, füllt die "Energize"-Kategorie, die sonst in keiner
+  anderen Technik hier vorkommt. Immer im Sitzen, bei Schwindel abbrechen.
 
 `resolveTechnique(id)` löst das auf ein Phasen-Array auf; die
 Session-Engine (`startSession`/`tickActive`/`advancePhase`) kennt keine
@@ -105,6 +114,39 @@ Nur `finishSession()` (vollständiger Abschluss aller Runden) schreibt einen
 Record, `cancelSession()` nie - dieselbe Konvention wie bei ice-breath, weil
 die Streak-Logik genau darauf aufbaut.
 
+## Erinnerung (Android-Bruecke)
+
+Eine reine WebView-App kann keine zuverlässige Erinnerung stellen, wenn die
+App geschlossen ist - `setTimeout`/Service-Worker-Background-Sync sind in
+Android-WebView (anders als vollem Chrome) nicht verlässlich. Deshalb gibt
+es hier zum ersten Mal eine kleine native Bruecke:
+
+- `MainActivity` registriert `webView.addJavascriptInterface(new
+  ReminderBridge(), "AndroidReminders")` - sicher, weil die WebView
+  ausschließlich das eigene gebündelte Asset lädt (`LocalWebViewClient`
+  leitet jeden externen Link an den Browser weiter, lädt ihn nie selbst).
+- `window.AndroidReminders.setReminder(hour, minute)` /
+  `.cancelReminder()` werden aus den Einstellungen aufgerufen
+  (`applyReminderSchedule()`); existiert nur in der echten APK, im
+  Desktop-Browser bleibt es ein no-op (die UI ist trotzdem testbar, nur die
+  tatsächliche Benachrichtigung nicht).
+- `ReminderScheduler` (eigene `SharedPreferences`, nicht `localStorage` -
+  die Receiver laufen außerhalb der WebView und könnten das nicht lesen)
+  plant über `AlarmManager.setAndAllowWhileIdle(...)` genau einen Alarm für
+  den nächsten Zeitpunkt - bewusst kein exaktes Repeating, das würde
+  `SCHEDULE_EXACT_ALARM` brauchen; ein paar Minuten Drift sind für eine
+  Atem-Erinnerung egal.
+- `ReminderReceiver` zeigt die Benachrichtigung und plant direkt den
+  nächsten Tag neu ein (Selbstverkettung statt Repeating-Alarm).
+- `BootReceiver` plant nach einem Geräte-Neustart neu, weil
+  `AlarmManager`-Alarme das nicht überleben.
+- `POST_NOTIFICATIONS` (API 33+) wird erst angefragt, wenn der Nutzer die
+  Erinnerung tatsächlich anschaltet - nicht beim App-Start.
+
+Die drei Java-Klassen liegen als Quelldateien unter `android-src/` und
+werden von `build.ps1` unverändert in das generierte Projekt kopiert (statt
+als PowerShell-String-Patch generiert zu werden).
+
 ## Streak
 
 Kalendertagbasiert (`dayKey()` + sortierte Menge distinkter Tage), DST-sicher
@@ -124,17 +166,49 @@ recherchierte, evidenzbasierte Techniken ergänzt - Physiological Sigh,
 Verlängertes Ausatmen, Wechselatmung, Bienenatmung (Details siehe
 "Technik-Engine" oben).
 
-**Stage 3 - Vibration** (gebaut, noch nicht geräte-getestet): kurzer Puls
-bei Einatmen/Ausatmen, doppelter Puls bei Halten-Phasen, langes Abschluss-
-Muster bei Session-Ende (`VIB`-Tabelle + `vibrateForPhase()`), per Toggle in
-den Einstellungen abschaltbar (Default an). Nutzt dieselbe
-`navigator.vibrate()`-API wie ice-breath.
+**Stage 3 - Vibration**: kurzer Puls bei Einatmen/Ausatmen, doppelter Puls
+bei Halten-Phasen, langes Abschluss-Muster bei Session-Ende (`VIB`-Tabelle +
+`vibrateForPhase()`), per Toggle in den Einstellungen abschaltbar (Default
+an). Nutzt dieselbe `navigator.vibrate()`-API wie ice-breath.
 
-Geplante Reihenfolge der restlichen Stages laut Nutzer: Audio → Reminder →
-geführte Programme/Kurse.
+Stage 2 + 3 device-getestet auf dem Pixel 11 Pro, vom Nutzer bestätigt
+("klappt gut").
+
+**Stage 2b - Bellows Breath**: energetisierende Technik ergänzt (siehe
+"Technik-Engine" oben), schließt die bis dahin fehlende "Energize"-Kategorie.
+
+**Stage 4 - Tägliche Erinnerung** (gebaut, noch nicht geräte-getestet -
+braucht echten Geräte-Neustart-Test): siehe Abschnitt "Erinnerung" oben.
+Erste Stage, die über reines WebView-JS hinausgeht (JS-Bridge,
+AlarmManager, BroadcastReceiver, Laufzeit-Permission).
+
+Audio ist als Nächstes dran, sobald es getestet werden kann (verschoben,
+weil beim Bauen "alle schlafen").
+
+## Kurse/Programme (Stage 5) - Brainstorm, noch nicht gebaut
+
+Ideen für spätere geführte Mehrtages-/Mehr-Techniken-Programme, gesammelt
+aber bewusst noch nicht implementiert:
+
+- **Struktur**: ein Programm ist eine Sequenz aus mehreren Technik-Sessions
+  (ggf. über mehrere Tage), keine neue Zeit-Engine - jede Etappe ist einfach
+  ein Aufruf von `resolveTechnique(id)` mit bestimmten Rundenzahlen,
+  hintereinander statt einzeln vom Nutzer gestartet.
+- **Kandidaten für Programme**: "5 Minuten Reset" (Physiological Sigh →
+  Verlängertes Ausatmen), "Einschlafroutine" (Coherent → 4-7-8),
+  "Energie-Kickstart" (Bellows Breath → Box Breathing), "7-Tage-Einstieg"
+  (jeden Tag eine andere Technik, baut auf dem bestehenden Streak-System
+  auf statt es zu ersetzen).
+- **Fortschritt**: ein Programm-Fortschritt ist nur eine abgeleitete Sicht
+  auf `breathewell.sessions.v1` (welche Etappen wurden an welchem Tag
+  abgeschlossen) - kein separates Datenmodell nötig, dieselbe Konvention wie
+  bei Streak/History.
+- **Offene Frage für später**: ob Programme optionale Sprachführung
+  brauchen (dann erst nach Stage "Audio" sinnvoll) oder rein mit Text/Visuals
+  auskommen wie der Rest der App.
 
 ## Bewusst zurückgestellt
 
-Audio-Cues/Sprachführung, geführte Programme/Kurse, ein Technik-Builder über
-die vier Zahlenfelder hinaus, Reminders/Benachrichtigungen, Wim Hof (das
-deckt ice-breath ab).
+Audio-Cues/Sprachführung, geführte Programme/Kurse (siehe Brainstorm oben),
+ein Technik-Builder über die vier Zahlenfelder hinaus, Wim Hof (das deckt
+ice-breath ab).

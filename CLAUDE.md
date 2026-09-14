@@ -29,9 +29,11 @@ cd "D:\claude code projects\breathe-well"
 
 Was sich nur auf dem echten Gerät (Pixel 11 Pro) verifizieren lässt, nicht
 im Desktop-Browser: ob der Bildschirm während einer echten Session wach
-bleibt, WebView-Force-Dark-Verhalten, Portrait-Lock, Android-Back während
-einer aktiven Session (muss den Abbrechen-Dialog öffnen statt die App zu
-schließen).
+bleibt, WebView-Force-Dark-Verhalten, Portrait-Lock, Zurück-Taste/-Wischgeste
+während einer aktiven Session (muss den Abbrechen-Dialog öffnen statt die
+App zu schließen), sowie die tägliche Erinnerung (Berechtigungsdialog beim
+ersten Anschalten, Benachrichtigung erscheint zur eingestellten Zeit auch
+bei geschlossener App, übersteht einen Geräte-Neustart).
 
 ## Konventionen
 
@@ -49,10 +51,14 @@ schließen).
   Verzweigung.
 - Harter Anspruch: kein Netzwerkzugriff, keine Gerätedaten außer dem, was
   die App selbst braucht. `new-app.ps1` wird ohne `-Online` aufgerufen.
-- Kein Audio in Stage 1 (bewusst zurückgestellt, siehe README) - kein
+- Kein Audio bisher (bewusst zurückgestellt, siehe README) - kein
   WebGL für den Pacer (siehe [hopper](../hopper): auf echtem Gerät stark
   geruckelt trotz sauberem Desktop-Test).
+- Die Erinnerungs-Java-Klassen liegen als echte Quelldateien unter
+  `android-src/*.java` (nicht als PowerShell-String-Patch) und werden von
+  `build.ps1` unverändert ins generierte Projekt kopiert - bei Änderungen
+  dort direkt editieren, nicht in `build.ps1`.
 
 ## Aktueller Stand
 
-Siehe "Aktueller Stand (Stage 1)" in [README.md](README.md).
+Siehe "Aktueller Stand" in [README.md](README.md).
