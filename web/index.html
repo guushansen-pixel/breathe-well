@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Breathe Well</title>
+<style>
+  :root {
+    --bg: #140F29;
+    --bg2: #1B1440;
+    --fg: #EDEAFB;
+    --fg-dim: #9E93C9;
+    --accent: #7C6FF0;
+    --accent2: #A79CFF;
+    --card-bg: #1F1A3D;
+    --card-bg-hover: #2A234F;
+    --danger: #E07A6E;
+    --ok: #57C08A;
+    --border: #322A5C;
+    --warn: #E0B04A;
+  }
+  html[data-theme="light"] {
+    --bg: #F3F1FC;
+    --bg2: #E7E2FA;
+    --fg: #211A3D;
+    --fg-dim: #675C99;
+    --accent: #6152D9;
+    --accent2: #4A3DBE;
+    --card-bg: #FFFFFF;
+    --card-bg-hover: #F1EEFC;
+    --border: #D9D3F2;
+    --danger: #C4453A;
+    --ok: #2E9C63;
+    --warn: #B4791C;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; overflow: hidden;
+    overscroll-behavior: none; -webkit-user-select: none; user-select: none;
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  #app { height: 100%; display: flex; flex-direction: column; }
+  .screen {
+    display: none; flex-direction: column; height: 100%; overflow-y: auto;
+    touch-action: pan-y;
+    padding: 20px;
+    padding-top: calc(36px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+  .screen.active { display: flex; }
+
+  h1 { font-size: 1.7em; margin: 0 0 4px; }
+  h2 { font-size: 1.3em; margin: 0 0 12px; }
+  h3 { font-size: 1.05em; margin: 18px 0 8px; color: var(--accent2); }
+  .subtitle { color: var(--fg-dim); margin: 0 0 20px; font-size: 0.95em; }
+  p { line-height: 1.5; }
+
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .bottom-nav { display: flex; gap: 10px; margin-top: 16px; }
+  .bottom-nav button { flex: 1; }
+
+  button { font-family: inherit; }
+  button.primary {
+    background: var(--accent); color: #FFFFFF; border: none; border-radius: 14px;
+    font-size: 1.05em; font-weight: 700; padding: 15px; cursor: pointer; width: 100%;
+  }
+  button.primary:active { filter: brightness(0.9); }
+  button.secondary {
+    background: transparent; color: var(--fg); border: 1px solid var(--border);
+    border-radius: 12px; font-size: 1em; padding: 14px; cursor: pointer;
+  }
+  button.secondary:active { background: var(--card-bg); }
+  button.danger { color: var(--danger); border-color: var(--danger); }
+  button.icon-btn {
+    background: var(--card-bg); border: 1px solid var(--border); color: var(--fg);
+    border-radius: 10px; padding: 10px 14px; font-size: 0.95em; cursor: pointer;
+  }
+  button.icon-btn:active { background: var(--card-bg-hover); }
+
+  .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  .streak-badge {
+    display: inline-flex; align-items: center; gap: 6px; background: var(--card-bg);
+    border: 1px solid var(--border); border-radius: 999px; padding: 8px 14px;
+    font-size: 0.95em; margin-bottom: 18px;
+  }
+  .streak-badge .n { font-weight: 800; color: var(--accent2); }
+
+  .setting-label { font-size: 0.95em; margin-bottom: 10px; color: var(--fg-dim); }
+  .stepper { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .stepper button {
+    width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border);
+    background: var(--bg); color: var(--fg); font-size: 1.4em; cursor: pointer; line-height: 1;
+  }
+  .stepper button:active { background: var(--card-bg-hover); }
+  .stepper .value { font-size: 1.2em; font-weight: 700; min-width: 70px; text-align: center; }
+  .stepper.compact button { width: 34px; height: 34px; font-size: 1.15em; }
+  .stepper.compact .value { font-size: 1em; min-width: 50px; }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tab-btn { flex: 1; background: var(--card-bg); border: 1px solid var(--border); color: var(--fg-dim); border-radius: 10px; padding: 10px; font-size: 0.9em; cursor: pointer; }
+  .tab-btn.active { color: #FFFFFF; background: var(--accent); border-color: var(--accent); font-weight: 700; }
+
+  .disclaimer-list { padding-left: 20px; }
+  .disclaimer-list li { margin-bottom: 8px; }
+
+  /* --- Technique cards (Home) --- */
+  .technique-card { position: relative; }
+  .technique-card.last-used { border-color: var(--accent); }
+  .last-used-tag { position: absolute; top: -9px; right: 14px; background: var(--accent); color: #fff; font-size: 0.72em; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+  .tc-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .tc-title { font-size: 1.15em; font-weight: 700; }
+  .tc-duration { color: var(--fg-dim); font-size: 0.9em; white-space: nowrap; }
+  .tc-desc { color: var(--fg-dim); font-size: 0.9em; margin: 4px 0 12px; }
+  .tc-rounds-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .tc-rounds-label { font-size: 0.9em; color: var(--fg-dim); }
+
+  /* --- Session screen --- */
+  #screen-session { padding: 0; position: relative; transition: background-color 0.6s ease; touch-action: none; }
+  #screen-session.stage-ready        { background: var(--bg2); }
+  #screen-session.visual-grow            { background: #241C55; }
+  #screen-session.visual-hold-expanded   { background: #170F2E; }
+  #screen-session.visual-shrink          { background: #1B2A4A; }
+  #screen-session.visual-hold-contracted { background: #10202C; }
+
+  .session-top {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 18px 18px 0;
+    padding-top: calc(18px + env(safe-area-inset-top, 0px));
+  }
+  .session-top button { background: rgba(0,0,0,0.28); color: var(--fg); border: none; border-radius: 10px; padding: 10px 14px; font-size: 0.9em; }
+  .round-indicator { font-size: 1.05em; color: rgba(255,255,255,0.85); padding-top: 12px; }
+
+  .session-view { display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; }
+  #screen-session.stage-ready #view-ready,
+  #screen-session.stage-active #view-active { display: flex; }
+
+  .phase-title { font-size: 1.3em; font-weight: 700; margin-bottom: 6px; }
+  .phase-hint { color: rgba(255,255,255,0.75); font-size: 1em; max-width: 300px; margin-top: 14px; }
+
+  .ready-count { font-size: 5em; font-weight: 800; }
+
+  .pacer-wrap { width: 260px; height: 260px; display: flex; align-items: center; justify-content: center; position: relative; }
+  .pacer-circle {
+    width: 210px; height: 210px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, var(--accent2), var(--accent));
+    transform: scale(0.55); will-change: transform, background;
+    transition: background 0.5s ease;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+  }
+  .pacer-circle.empty {
+    background: radial-gradient(circle at 35% 30%, #9FE8DD, #4FBEA8);
+  }
+  .pacer-label { font-size: 1.15em; font-weight: 700; color: #10122A; }
+  .pacer-count { font-size: 1.5em; font-weight: 800; color: #10122A; margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+  /* --- Summary --- */
+  #screen-summary { align-items: stretch; }
+  .summary-hero { text-align: center; margin-bottom: 18px; }
+  .summary-hero .big { font-size: 1.6em; margin-bottom: 6px; }
+  .summary-hero .technique { font-size: 1.5em; font-weight: 800; color: var(--accent2); }
+
+  /* --- History --- */
+  .breakdown-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border); }
+  .breakdown-row:last-child { border-bottom: none; }
+  .breakdown-row .n { font-weight: 700; }
+  .history-list { display: flex; flex-direction: column; gap: 8px; }
+  .history-item { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .history-item .row1 { display: flex; justify-content: space-between; font-weight: 600; }
+  .history-item .row2 { display: flex; justify-content: space-between; color: var(--fg-dim); font-size: 0.85em; margin-top: 4px; }
+  .empty-hint { color: var(--fg-dim); text-align: center; margin-top: 30px; }
+
+  .confirm-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none;
+    align-items: center; justify-content: center; z-index: 50;
+  }
+  .confirm-backdrop.active { display: flex; }
+  .confirm-box { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 22px; width: 85%; max-width: 340px; }
+  .confirm-box p { margin: 0 0 18px; }
+  .confirm-box .buttons { display: flex; gap: 10px; }
+  .confirm-box .buttons button { flex: 1; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Home -->
+  <div id="screen-home" class="screen active">
+    <h1>Breathe Well</h1>
+    <p class="subtitle">Atemtechniken, offline &amp; privat</p>
+    <div id="streak-badge-wrap"></div>
+
+    <div class="card technique-card" data-technique="box">
+      <span class="last-used-tag" style="display:none">Zuletzt</span>
+      <div class="tc-head">
+        <div class="tc-title">Box Breathing</div>
+        <div class="tc-duration" id="tc-duration-box"></div>
+      </div>
+      <div class="tc-desc">4-4-4-4 Sekunden &ndash; beruhigt und fokussiert.</div>
+      <div class="tc-rounds-row">
+        <span class="tc-rounds-label">Runden</span>
+        <div class="stepper compact">
+          <button data-round-step="box" data-dir="-1">&minus;</button>
+          <span class="value" id="tc-rounds-box">6</span>
+          <button data-round-step="box" data-dir="1">+</button>
+        </div>
+      </div>
+      <button class="primary" data-start="box">Starten</button>
+    </div>
+
+    <div class="card technique-card" data-technique="fourSevenEight">
+      <span class="last-used-tag" style="display:none">Zuletzt</span>
+      <div class="tc-head">
+        <div class="tc-title">4-7-8 Atmung</div>
+        <div class="tc-duration" id="tc-duration-fourSevenEight"></div>
+      </div>
+      <div class="tc-desc">Löst Anspannung, hilft beim Einschlafen.</div>
+      <div class="tc-rounds-row">
+        <span class="tc-rounds-label">Runden</span>
+        <div class="stepper compact">
+          <button data-round-step="fourSevenEight" data-dir="-1">&minus;</button>
+          <span class="value" id="tc-rounds-fourSevenEight">4</span>
+          <button data-round-step="fourSevenEight" data-dir="1">+</button>
+        </div>
+      </div>
+      <button class="primary" data-start="fourSevenEight">Starten</button>
+    </div>
+
+    <div class="card technique-card" data-technique="coherent">
+      <span class="last-used-tag" style="display:none">Zuletzt</span>
+      <div class="tc-head">
+        <div class="tc-title">Coherent Breathing</div>
+        <div class="tc-duration" id="tc-duration-coherent"></div>
+      </div>
+      <div class="tc-desc">Gleichmäßiger Rhythmus für Ruhe &amp; Fokus.</div>
+      <div class="tc-rounds-row">
+        <span class="tc-rounds-label">Runden</span>
+        <div class="stepper compact">
+          <button data-round-step="coherent" data-dir="-1">&minus;</button>
+          <span class="value" id="tc-rounds-coherent">10</span>
+          <button data-round-step="coherent" data-dir="1">+</button>
+        </div>
+      </div>
+      <button class="primary" data-start="coherent">Starten</button>
+    </div>
+
+    <div class="card technique-card" data-technique="custom">
+      <span class="last-used-tag" style="display:none">Zuletzt</span>
+      <div class="tc-head">
+        <div class="tc-title">Eigenes Muster</div>
+        <div class="tc-duration" id="tc-duration-custom"></div>
+      </div>
+      <div class="tc-desc" id="tc-desc-custom"></div>
+      <button class="secondary" id="btn-open-custom">Anpassen &amp; Starten</button>
+    </div>
+
+    <div style="flex:1"></div>
+    <div class="bottom-nav">
+      <button class="icon-btn" id="btn-open-settings">Einstellungen</button>
+      <button class="icon-btn" id="btn-open-history">Verlauf</button>
+    </div>
+  </div>
+
+  <!-- Custom pattern editor -->
+  <div id="screen-custom" class="screen">
+    <h2>Eigenes Muster</h2>
+    <p class="subtitle">0 Sekunden überspringt eine Halten-Phase.</p>
+
+    <div class="card">
+      <div class="setting-label">Einatmen</div>
+      <div class="stepper">
+        <button data-custom-step="inhale" data-dir="-1">&minus;</button>
+        <span class="value" id="value-custom-inhale">4 s</span>
+        <button data-custom-step="inhale" data-dir="1">+</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="setting-label">Halten (Lunge voll)</div>
+      <div class="stepper">
+        <button data-custom-step="hold1" data-dir="-1">&minus;</button>
+        <span class="value" id="value-custom-hold1">0 s</span>
+        <button data-custom-step="hold1" data-dir="1">+</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="setting-label">Ausatmen</div>
+      <div class="stepper">
+        <button data-custom-step="exhale" data-dir="-1">&minus;</button>
+        <span class="value" id="value-custom-exhale">6 s</span>
+        <button data-custom-step="exhale" data-dir="1">+</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="setting-label">Halten (Lunge leer)</div>
+      <div class="stepper">
+        <button data-custom-step="hold2" data-dir="-1">&minus;</button>
+        <span class="value" id="value-custom-hold2">0 s</span>
+        <button data-custom-step="hold2" data-dir="1">+</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="setting-label">Anzahl Runden</div>
+      <div class="stepper">
+        <button data-custom-step="rounds" data-dir="-1">&minus;</button>
+        <span class="value" id="value-custom-rounds">8</span>
+        <button data-custom-step="rounds" data-dir="1">+</button>
+      </div>
+    </div>
+
+    <div class="card" style="text-align:center">
+      <div class="setting-label" style="margin-bottom:2px">Gesamtdauer</div>
+      <div style="font-size:1.2em; font-weight:700" id="custom-total-duration"></div>
+    </div>
+
+    <div style="flex:1"></div>
+    <button class="primary" id="btn-custom-start">Starten</button>
+    <div style="height:10px"></div>
+    <button class="secondary" id="btn-custom-back">Zurück</button>
+  </div>
+
+  <!-- Settings -->
+  <div id="screen-settings" class="screen">
+    <h2>Einstellungen</h2>
+
+    <div class="card">
+      <div class="setting-label">Design</div>
+      <div class="tabs" style="margin-bottom:0">
+        <button class="tab-btn" data-theme-choice="system">System</button>
+        <button class="tab-btn" data-theme-choice="light">Hell</button>
+        <button class="tab-btn" data-theme-choice="dark">Dunkel</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <p style="margin:0">Diese App läuft komplett offline. Es werden keine
+      Daten gesammelt, gespeichert ist alles ausschließlich lokal auf diesem
+      Gerät.</p>
+    </div>
+
+    <button class="secondary danger" id="btn-clear-history">Verlauf löschen</button>
+    <div style="height:10px"></div>
+    <button class="secondary" id="btn-settings-back">Zurück</button>
+  </div>
+
+  <!-- Session -->
+  <div id="screen-session" class="screen stage-ready">
+    <div class="session-top">
+      <button id="btn-cancel-session">✕ Abbrechen</button>
+      <span class="round-indicator" id="round-indicator"></span>
+    </div>
+
+    <div id="view-ready" class="session-view">
+      <div class="phase-title" id="ready-technique-label">Box Breathing</div>
+      <div class="ready-count" id="ready-count">3</div>
+      <div class="phase-hint">Setz dich bequem hin und mach es dir gemütlich.</div>
+    </div>
+
+    <div id="view-active" class="session-view">
+      <div class="pacer-wrap">
+        <div class="pacer-circle" id="pacer-circle">
+          <div class="pacer-label" id="pacer-label">Einatmen</div>
+          <div class="pacer-count" id="pacer-count">4</div>
+        </div>
+      </div>
+      <div class="phase-hint" id="phase-hint">Ruhig einatmen</div>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div id="screen-summary" class="screen">
+    <h2>Session beendet</h2>
+    <div class="summary-hero">
+      <div class="big">Technik</div>
+      <div class="technique" id="summary-technique">Box Breathing</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <div class="setting-label" style="margin-bottom:2px">Runden</div>
+      <div style="font-size:1.3em; font-weight:700" id="summary-rounds"></div>
+    </div>
+    <div class="card" style="text-align:center">
+      <div class="setting-label" style="margin-bottom:2px">Gesamtdauer</div>
+      <div style="font-size:1.3em; font-weight:700" id="summary-duration"></div>
+    </div>
+    <div style="flex:1"></div>
+    <button class="primary" id="btn-summary-done">Fertig</button>
+  </div>
+
+  <!-- History -->
+  <div id="screen-history" class="screen">
+    <h2>Verlauf</h2>
+
+    <div class="card">
+      <div class="setting-label" style="margin-bottom:2px">Aktueller Streak</div>
+      <div style="font-size:1.6em; font-weight:800" id="hist-current-streak">0 Tage</div>
+      <div class="subtitle" style="margin:4px 0 0" id="hist-longest-streak"></div>
+    </div>
+
+    <div class="card" id="hist-breakdown-card">
+      <div class="setting-label" style="margin-bottom:2px">Sessions insgesamt</div>
+      <div style="font-size:1.4em; font-weight:800; margin-bottom:8px" id="hist-total-sessions">0</div>
+      <div id="hist-breakdown"></div>
+    </div>
+
+    <h3>Letzte Sessions</h3>
+    <div class="history-list" id="history-list"></div>
+
+    <div style="height:10px"></div>
+    <button class="secondary" id="btn-history-back">Zurück</button>
+  </div>
+
+</div>
+
+<div class="confirm-backdrop" id="confirm-backdrop">
+  <div class="confirm-box">
+    <p id="confirm-text">Wirklich?</p>
+    <div class="buttons">
+      <button class="secondary" id="confirm-no">Abbrechen</button>
+      <button class="secondary danger" id="confirm-yes">Ja</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var FAST = new URLSearchParams(location.search).get('fast') ? 10 : 1;
+
+  // ---------- Persistence ----------
+  function loadJSON(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      if (!raw) return fallback;
+      return JSON.parse(raw);
+    } catch (e) { return fallback; }
+  }
+  function saveJSON(key, val) {
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
+  }
+
+  var DEFAULT_SETTINGS = {
+    theme: 'system',
+    lastTechniqueId: null,
+    techniqueRounds: { box: 6, fourSevenEight: 4, coherent: 10 },
+    customPattern: { inhale: 4, hold1: 0, exhale: 6, hold2: 0, rounds: 8 }
+  };
+  var settings = Object.assign({}, DEFAULT_SETTINGS, loadJSON('breathewell.settings.v1', {}));
+  settings.techniqueRounds = Object.assign({}, DEFAULT_SETTINGS.techniqueRounds, settings.techniqueRounds || {});
+  settings.customPattern = Object.assign({}, DEFAULT_SETTINGS.customPattern, settings.customPattern || {});
+  var sessions = loadJSON('breathewell.sessions.v1', []);
+
+  function persistSettings() { saveJSON('breathewell.settings.v1', settings); }
+  function persistSessions() { saveJSON('breathewell.sessions.v1', sessions); }
+
+  function effectiveTheme() {
+    if (settings.theme === 'light' || settings.theme === 'dark') return settings.theme;
+    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  }
+  function applyTheme() {
+    document.documentElement.setAttribute('data-theme', effectiveTheme());
+  }
+  applyTheme();
+  try {
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    var onMqChange = function () { if (settings.theme === 'system') applyTheme(); };
+    if (mq.addEventListener) mq.addEventListener('change', onMqChange);
+    else if (mq.addListener) mq.addListener(onMqChange);
+  } catch (e) {}
+
+  // ---------- Formatting ----------
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function formatClock(sec) {
+    sec = Math.max(0, Math.round(sec));
+    var m = Math.floor(sec / 60), s = sec % 60;
+    return m + ':' + pad2(s);
+  }
+  function formatDurationLong(sec) {
+    sec = Math.max(0, Math.round(sec));
+    var h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60);
+    if (h > 0) return h + ' Std ' + m + ' Min';
+    return m + ' Min';
+  }
+  function formatDateTime(epochMs) {
+    var d = new Date(epochMs);
+    return d.toLocaleDateString('de-DE') + ', ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // ---------- Math helpers ----------
+  function easeInOut(t) { return 0.5 - 0.5 * Math.cos(Math.PI * Math.min(1, Math.max(0, t))); }
+  function dayKey(ms) {
+    var d = new Date(ms);
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  }
+  function dayKeyToLocalDate(k) {
+    var p = k.split('-').map(Number);
+    return new Date(p[0], p[1] - 1, p[2]);
+  }
+
+  // ---------- Wake Lock (backup only; FLAG_KEEP_SCREEN_ON in MainActivity is primary) ----------
+  var wakeLock = null;
+  function requestWakeLock() {
+    if (!('wakeLock' in navigator)) return;
+    navigator.wakeLock.request('screen').then(function (wl) { wakeLock = wl; }).catch(function () {});
+  }
+  function releaseWakeLock() {
+    if (wakeLock) { try { wakeLock.release(); } catch (e) {} wakeLock = null; }
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && state.screen === 'session' && session) requestWakeLock();
+  });
+
+  // ---------- Confirm dialog ----------
+  function confirmDialog(text, onYes) {
+    var backdrop = document.getElementById('confirm-backdrop');
+    document.getElementById('confirm-text').textContent = text;
+    backdrop.classList.add('active');
+    function cleanup() { backdrop.classList.remove('active'); yesBtn.onclick = null; noBtn.onclick = null; }
+    var yesBtn = document.getElementById('confirm-yes'), noBtn = document.getElementById('confirm-no');
+    yesBtn.onclick = function () { cleanup(); onYes(); };
+    noBtn.onclick = function () { cleanup(); };
+  }
+
+  // ---------- App / navigation state ----------
+  var state = { screen: 'home' };
+
+  function showScreen(name, opts) {
+    opts = opts || {};
+    document.querySelectorAll('.screen').forEach(function (el) { el.classList.remove('active'); });
+    document.getElementById('screen-' + name).classList.add('active');
+    state.screen = name;
+    if (opts.pushHistory !== false && name !== 'home') {
+      try { history.pushState({ screen: name }, ''); } catch (e) {}
+    }
+  }
+
+  window.addEventListener('popstate', function () {
+    if (state.screen === 'session' && session) {
+      try { history.pushState({ screen: 'session' }, ''); } catch (e) {}
+      cancelSession();
+      return;
+    }
+    showScreen('home', { pushHistory: false });
+    renderHome();
+  });
+
+  // ---------- Technique data model ----------
+  var PHASE_META = {
+    inhale: { label: 'Einatmen', visual: 'grow', hint: 'Ruhig einatmen' },
+    hold1:  { label: 'Halten',   visual: 'hold-expanded', hint: 'Luft halten' },
+    exhale: { label: 'Ausatmen', visual: 'shrink', hint: 'Langsam ausatmen' },
+    hold2:  { label: 'Halten',   visual: 'hold-contracted', hint: 'Leer halten' }
+  };
+  var PHASE_ORDER = ['inhale', 'hold1', 'exhale', 'hold2'];
+
+  var TECHNIQUES = {
+    box: { id: 'box', label: 'Box Breathing', seconds: { inhale: 4, hold1: 4, exhale: 4, hold2: 4 }, editable: false },
+    fourSevenEight: { id: 'fourSevenEight', label: '4-7-8 Atmung', seconds: { inhale: 4, hold1: 7, exhale: 8, hold2: 0 }, editable: false },
+    coherent: { id: 'coherent', label: 'Coherent Breathing', seconds: { inhale: 5.5, hold1: 0, exhale: 5.5, hold2: 0 }, editable: false },
+    custom: { id: 'custom', label: 'Eigenes Muster', seconds: null, editable: true }
+  };
+
+  function resolveTechnique(id) {
+    var t = TECHNIQUES[id];
+    var secondsSrc = t.editable ? settings.customPattern : t.seconds;
+    var rounds = t.editable ? settings.customPattern.rounds : settings.techniqueRounds[id];
+    var phases = PHASE_ORDER.filter(function (k) { return secondsSrc[k] > 0; }).map(function (k) {
+      return { key: k, label: PHASE_META[k].label, visual: PHASE_META[k].visual, hint: PHASE_META[k].hint, seconds: secondsSrc[k] };
+    });
+    return { id: t.id, label: t.label, phases: phases, rounds: rounds, editable: t.editable };
+  }
+  function techniqueLabel(id) { return TECHNIQUES[id] ? TECHNIQUES[id].label : 'Unbekannt'; }
+  function techniqueTotalSeconds(tech) {
+    var perRound = tech.phases.reduce(function (sum, p) { return sum + p.seconds; }, 0);
+    return perRound * tech.rounds;
+  }
+
+  // ---------- Streak ----------
+  function distinctSortedDayKeys() {
+    var set = {};
+    sessions.forEach(function (s) { set[dayKey(s.endedAt)] = true; });
+    return Object.keys(set).sort();
+  }
+  function longestStreak() {
+    var days = distinctSortedDayKeys(), best = 0, cur = 0, prev = null;
+    days.forEach(function (k) {
+      var d = dayKeyToLocalDate(k);
+      cur = (prev && Math.round((d - prev) / 86400000) === 1) ? cur + 1 : 1;
+      prev = d;
+      if (cur > best) best = cur;
+    });
+    return best;
+  }
+  function currentStreak() {
+    var days = distinctSortedDayKeys();
+    if (!days.length) return 0;
+    var todayKey = dayKey(Date.now());
+    var gapFromToday = Math.round((dayKeyToLocalDate(todayKey) - dayKeyToLocalDate(days[days.length - 1])) / 86400000);
+    if (gapFromToday > 1) return 0;
+    var cur = 1;
+    for (var i = days.length - 1; i > 0; i--) {
+      var gap = Math.round((dayKeyToLocalDate(days[i]) - dayKeyToLocalDate(days[i - 1])) / 86400000);
+      if (gap === 1) cur++; else break;
+    }
+    return cur;
+  }
+
+  // ---------- Session state machine ----------
+  var session = null;
+  var READY_MS = 3000;
+
+  function startSession(tech) {
+    session = {
+      techniqueId: tech.id, phases: tech.phases, roundCount: tech.rounds,
+      roundIndex: 0, phaseIndex: 0, stage: 'ready',
+      startedAt: Date.now(), phaseStartEpoch: Date.now(),
+      _lastReadyShown: null, _lastCountShown: null
+    };
+    requestWakeLock();
+    document.getElementById('ready-technique-label').textContent = tech.label;
+    document.getElementById('screen-session').className = 'screen active stage-ready';
+    renderRoundIndicator();
+    showScreen('session');
+  }
+
+  function renderRoundIndicator() {
+    document.getElementById('round-indicator').textContent =
+      'Runde ' + (session.roundIndex + 1) + '/' + session.roundCount;
+  }
+
+  function tickReady() {
+    var elapsed = (Date.now() - session.phaseStartEpoch) * FAST;
+    var remaining = Math.max(1, Math.ceil((READY_MS - elapsed) / 1000));
+    if (remaining !== session._lastReadyShown) {
+      session._lastReadyShown = remaining;
+      document.getElementById('ready-count').textContent = String(remaining);
+    }
+    if (elapsed >= READY_MS) beginRound();
+  }
+
+  function beginRound() {
+    session.stage = 'active';
+    session.phaseIndex = 0;
+    session.phaseStartEpoch = Date.now();
+    session._lastCountShown = null;
+    renderRoundIndicator();
+    beginPhaseVisuals();
+  }
+
+  function beginPhaseVisuals() {
+    var phase = session.phases[session.phaseIndex];
+    document.getElementById('screen-session').className = 'screen active stage-active visual-' + phase.visual;
+    document.getElementById('pacer-label').textContent = phase.label;
+    document.getElementById('phase-hint').textContent = phase.hint;
+    document.getElementById('pacer-circle').classList.toggle('empty', phase.visual === 'shrink' || phase.visual === 'hold-contracted');
+  }
+
+  function tickActive() {
+    var phase = session.phases[session.phaseIndex];
+    var elapsed = (Date.now() - session.phaseStartEpoch) * FAST;
+    var totalMs = phase.seconds * 1000;
+    if (elapsed >= totalMs) { advancePhase(); return; }
+
+    var t = elapsed / totalMs;
+    var circle = document.getElementById('pacer-circle');
+    if (phase.visual === 'grow') circle.style.transform = 'scale(' + (0.55 + 0.45 * easeInOut(t)).toFixed(3) + ')';
+    else if (phase.visual === 'shrink') circle.style.transform = 'scale(' + (1.0 - 0.45 * easeInOut(t)).toFixed(3) + ')';
+    else if (phase.visual === 'hold-expanded') circle.style.transform = 'scale(1.000)';
+    else circle.style.transform = 'scale(0.550)';
+
+    var remaining = Math.max(1, Math.ceil((totalMs - elapsed) / 1000));
+    if (remaining !== session._lastCountShown) {
+      session._lastCountShown = remaining;
+      document.getElementById('pacer-count').textContent = String(remaining);
+    }
+  }
+
+  function advancePhase() {
+    session.phaseIndex++;
+    if (session.phaseIndex >= session.phases.length) {
+      session.roundIndex++;
+      if (session.roundIndex >= session.roundCount) { finishSession(); return; }
+      session.phaseIndex = 0;
+      renderRoundIndicator();
+    }
+    session.phaseStartEpoch = Date.now();
+    session._lastCountShown = null;
+    beginPhaseVisuals();
+  }
+
+  function finishSession() {
+    releaseWakeLock();
+    var endedAt = Date.now();
+    var record = {
+      techniqueId: session.techniqueId,
+      params: session.phases,
+      startedAt: session.startedAt,
+      endedAt: endedAt,
+      plannedRounds: session.roundCount,
+      completedRounds: session.roundCount
+    };
+    sessions.push(record);
+    persistSessions();
+    settings.lastTechniqueId = session.techniqueId;
+    persistSettings();
+    session = null;
+    renderSummary(record);
+    showScreen('summary');
+  }
+
+  function cancelSession() {
+    confirmDialog('Session wirklich abbrechen? Der Fortschritt wird nicht gespeichert.', function () {
+      releaseWakeLock();
+      session = null;
+      showScreen('home', { pushHistory: false });
+      renderHome();
+    });
+  }
+
+  // ---------- Session render loop ----------
+  function loop() {
+    requestAnimationFrame(loop);
+    if (state.screen !== 'session' || !session) return;
+    if (session.stage === 'ready') tickReady();
+    else tickActive();
+  }
+  requestAnimationFrame(loop);
+
+  // ---------- Home ----------
+  function renderHome() {
+    var cur = currentStreak();
+    var wrap = document.getElementById('streak-badge-wrap');
+    wrap.innerHTML = cur > 0
+      ? '<div class="streak-badge">🔥 <span class="n">' + cur + '</span> Tage Streak</div>'
+      : '';
+
+    ['box', 'fourSevenEight', 'coherent'].forEach(function (id) {
+      var tech = resolveTechnique(id);
+      document.getElementById('tc-rounds-' + id).textContent = String(tech.rounds);
+      document.getElementById('tc-duration-' + id).textContent = '≈ ' + formatClock(techniqueTotalSeconds(tech));
+    });
+
+    var custom = resolveTechnique('custom');
+    document.getElementById('tc-duration-custom').textContent = custom.phases.length
+      ? '≈ ' + formatClock(techniqueTotalSeconds(custom)) : '';
+    document.getElementById('tc-desc-custom').textContent = customSummaryText();
+
+    document.querySelectorAll('.technique-card').forEach(function (card) {
+      var isLast = settings.lastTechniqueId === card.getAttribute('data-technique');
+      card.classList.toggle('last-used', isLast);
+      card.querySelector('.last-used-tag').style.display = isLast ? '' : 'none';
+    });
+  }
+
+  function customSummaryText() {
+    var p = settings.customPattern, parts = [];
+    if (p.inhale > 0) parts.push(p.inhale + 's ein');
+    if (p.hold1 > 0) parts.push(p.hold1 + 's halten');
+    if (p.exhale > 0) parts.push(p.exhale + 's aus');
+    if (p.hold2 > 0) parts.push(p.hold2 + 's halten');
+    return parts.join(' · ') + ' · ' + p.rounds + ' Runden';
+  }
+
+  var ROUNDS_META = {
+    box: { min: 1, max: 20 }, fourSevenEight: { min: 1, max: 20 }, coherent: { min: 1, max: 30 }
+  };
+  document.querySelectorAll('[data-round-step]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var id = btn.getAttribute('data-round-step');
+      var dir = parseInt(btn.getAttribute('data-dir'), 10);
+      var meta = ROUNDS_META[id];
+      settings.techniqueRounds[id] = Math.max(meta.min, Math.min(meta.max, settings.techniqueRounds[id] + dir));
+      persistSettings();
+      renderHome();
+    });
+  });
+  document.querySelectorAll('[data-start]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      startSession(resolveTechnique(btn.getAttribute('data-start')));
+    });
+  });
+
+  // ---------- Custom editor ----------
+  var CUSTOM_STEPPER_META = {
+    inhale: { step: 1, min: 1, max: 20, display: function (v) { return v + ' s'; } },
+    hold1:  { step: 1, min: 0, max: 20, display: function (v) { return v + ' s'; } },
+    exhale: { step: 1, min: 1, max: 20, display: function (v) { return v + ' s'; } },
+    hold2:  { step: 1, min: 0, max: 20, display: function (v) { return v + ' s'; } },
+    rounds: { step: 1, min: 1, max: 30, display: function (v) { return String(v); } }
+  };
+  function renderCustomForm() {
+    Object.keys(CUSTOM_STEPPER_META).forEach(function (key) {
+      document.getElementById('value-custom-' + key).textContent = CUSTOM_STEPPER_META[key].display(settings.customPattern[key]);
+    });
+    var tech = resolveTechnique('custom');
+    document.getElementById('custom-total-duration').textContent =
+      tech.phases.length ? formatClock(techniqueTotalSeconds(tech)) : '–';
+  }
+  document.querySelectorAll('#screen-custom button[data-custom-step]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var key = btn.getAttribute('data-custom-step');
+      var dir = parseInt(btn.getAttribute('data-dir'), 10);
+      var meta = CUSTOM_STEPPER_META[key];
+      settings.customPattern[key] = Math.max(meta.min, Math.min(meta.max, settings.customPattern[key] + dir * meta.step));
+      persistSettings();
+      renderCustomForm();
+    });
+  });
+  document.getElementById('btn-open-custom').addEventListener('click', function () {
+    renderCustomForm();
+    showScreen('custom');
+  });
+  document.getElementById('btn-custom-back').addEventListener('click', function () {
+    showScreen('home', { pushHistory: false }); renderHome();
+  });
+  document.getElementById('btn-custom-start').addEventListener('click', function () {
+    var tech = resolveTechnique('custom');
+    if (!tech.phases.length) return;
+    startSession(tech);
+  });
+
+  // ---------- Settings ----------
+  function renderSettings() {
+    document.querySelectorAll('[data-theme-choice]').forEach(function (btn) {
+      btn.classList.toggle('active', btn.getAttribute('data-theme-choice') === settings.theme);
+    });
+  }
+  document.querySelectorAll('[data-theme-choice]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      settings.theme = btn.getAttribute('data-theme-choice');
+      persistSettings();
+      applyTheme();
+      renderSettings();
+    });
+  });
+  document.getElementById('btn-clear-history').addEventListener('click', function () {
+    confirmDialog('Gesamten Verlauf löschen?', function () {
+      sessions = [];
+      persistSessions();
+      renderHistory(); renderHome();
+    });
+  });
+
+  // ---------- Summary ----------
+  function renderSummary(record) {
+    document.getElementById('summary-technique').textContent = techniqueLabel(record.techniqueId);
+    document.getElementById('summary-rounds').textContent = record.completedRounds + ' / ' + record.plannedRounds;
+    document.getElementById('summary-duration').textContent = formatDurationLong((record.endedAt - record.startedAt) / 1000);
+  }
+
+  // ---------- History ----------
+  function renderHistory() {
+    document.getElementById('hist-current-streak').textContent = currentStreak() + ' Tage';
+    document.getElementById('hist-longest-streak').textContent = 'Bestwert: ' + longestStreak() + ' Tage';
+
+    document.getElementById('hist-total-sessions').textContent = String(sessions.length);
+    var counts = {};
+    sessions.forEach(function (s) { counts[s.techniqueId] = (counts[s.techniqueId] || 0) + 1; });
+    var breakdown = document.getElementById('hist-breakdown');
+    breakdown.innerHTML = '';
+    Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; }).forEach(function (id) {
+      var row = document.createElement('div');
+      row.className = 'breakdown-row';
+      row.innerHTML = '<span>' + techniqueLabel(id) + '</span><span class="n">' + counts[id] + '</span>';
+      breakdown.appendChild(row);
+    });
+
+    var list = document.getElementById('history-list');
+    list.innerHTML = '';
+    if (!sessions.length) {
+      list.innerHTML = '<div class="empty-hint">Noch keine Sessions aufgezeichnet.</div>';
+    } else {
+      sessions.slice().reverse().slice(0, 30).forEach(function (s) {
+        var item = document.createElement('div');
+        item.className = 'history-item';
+        item.innerHTML =
+          '<div class="row1"><span>' + techniqueLabel(s.techniqueId) + '</span><span>' + s.completedRounds + ' Runden</span></div>' +
+          '<div class="row2"><span>' + formatDateTime(s.startedAt) + '</span><span>' + formatDurationLong((s.endedAt - s.startedAt) / 1000) + '</span></div>';
+        list.appendChild(item);
+      });
+    }
+  }
+
+  // ---------- Navigation wiring ----------
+  document.getElementById('btn-open-settings').addEventListener('click', function () { renderSettings(); showScreen('settings'); });
+  document.getElementById('btn-open-history').addEventListener('click', function () { renderHistory(); showScreen('history'); });
+  document.getElementById('btn-settings-back').addEventListener('click', function () { showScreen('home', { pushHistory: false }); renderHome(); });
+  document.getElementById('btn-history-back').addEventListener('click', function () { showScreen('home', { pushHistory: false }); renderHome(); });
+  document.getElementById('btn-cancel-session').addEventListener('click', cancelSession);
+  document.getElementById('btn-summary-done').addEventListener('click', function () {
+    showScreen('home', { pushHistory: false }); renderHome();
+  });
+
+  // ---------- Init ----------
+  renderHome();
+})();
+</script>
+</body>
+</html>

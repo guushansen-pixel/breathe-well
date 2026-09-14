@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher-Icon fuer Breathe Well: konzentrische Atem-Ringe um einen
+     ruhigen Kern. 108x108, Motiv innerhalb von Radius 31 um die Mitte
+     (54,54), damit nichts von der runden Launcher-Maske abgeschnitten
+     wird. Reine Formen statt Farbverlaeufe, damit das Icon auch bei
+     anderer IconBackground-Farbe erkennbar bleibt (gleiche Konvention
+     wie bei ice-breath/hopper/interval-timer). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Aeusserer Atem-Ring -->
+    <path android:strokeColor="#6FE7DC"
+        android:strokeWidth="3"
+        android:strokeAlpha="0.55"
+        android:pathData="M84,54 a30,30 0 1,0 -0.1,0 z" />
+
+    <!-- Mittlerer Ring -->
+    <path android:strokeColor="#B9AEFF"
+        android:strokeWidth="3"
+        android:strokeAlpha="0.85"
+        android:pathData="M75,54 a21,21 0 1,0 -0.1,0 z" />
+
+    <!-- Ruhiger Kern -->
+    <path android:fillColor="#F3F0FF"
+        android:pathData="M64,54 a10,10 0 1,0 -0.1,0 z" />
+</vector>
