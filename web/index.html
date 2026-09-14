@@ -248,6 +248,78 @@
       <button class="primary" data-start="coherent">Starten</button>
     </div>
 
+    <div class="card technique-card" data-technique="physiologicalSigh">
+      <span class="last-used-tag" style="display:none">Zuletzt</span>
+      <div class="tc-head">
+        <div class="tc-title">Physiological Sigh</div>
+        <div class="tc-duration" id="tc-duration-physiologicalSigh"></div>
+      </div>
+      <div class="tc-desc">Doppelter Einatmer, langes Ausatmen &ndash; von Huberman/Stanford (2023) als schnellster Weg gegen akuten Stress bestätigt. Beide Einatmer durch die Nase, ausatmen hörbar durch den Mund.</div>
+      <div class="tc-rounds-row">
+        <span class="tc-rounds-label">Runden</span>
+        <div class="stepper compact">
+          <button data-round-step="physiologicalSigh" data-dir="-1">&minus;</button>
+          <span class="value" id="tc-rounds-physiologicalSigh">5</span>
+          <button data-round-step="physiologicalSigh" data-dir="1">+</button>
+        </div>
+      </div>
+      <button class="primary" data-start="physiologicalSigh">Starten</button>
+    </div>
+
+    <div class="card technique-card" data-technique="extendedExhale">
+      <span class="last-used-tag" style="display:none">Zuletzt</span>
+      <div class="tc-head">
+        <div class="tc-title">Verlängertes Ausatmen</div>
+        <div class="tc-duration" id="tc-duration-extendedExhale"></div>
+      </div>
+      <div class="tc-desc">Einfaches 1:2-Verhältnis (4 ein, 8 aus) ohne Halten &ndash; der lange Ausatem aktiviert den Vagusnerv. Ein- und ausatmen durch die Nase.</div>
+      <div class="tc-rounds-row">
+        <span class="tc-rounds-label">Runden</span>
+        <div class="stepper compact">
+          <button data-round-step="extendedExhale" data-dir="-1">&minus;</button>
+          <span class="value" id="tc-rounds-extendedExhale">8</span>
+          <button data-round-step="extendedExhale" data-dir="1">+</button>
+        </div>
+      </div>
+      <button class="primary" data-start="extendedExhale">Starten</button>
+    </div>
+
+    <div class="card technique-card" data-technique="alternateNostril">
+      <span class="last-used-tag" style="display:none">Zuletzt</span>
+      <div class="tc-head">
+        <div class="tc-title">Wechselatmung</div>
+        <div class="tc-duration" id="tc-duration-alternateNostril"></div>
+      </div>
+      <div class="tc-desc">Klassische Yoga-Technik (Nadi Shodhana) &ndash; abwechselnd durch ein Nasenloch ein-, durchs andere ausatmen. Die Seite wechselt jede Runde, die Ansage dazu kommt während der Session.</div>
+      <div class="tc-rounds-row">
+        <span class="tc-rounds-label">Runden</span>
+        <div class="stepper compact">
+          <button data-round-step="alternateNostril" data-dir="-1">&minus;</button>
+          <span class="value" id="tc-rounds-alternateNostril">8</span>
+          <button data-round-step="alternateNostril" data-dir="1">+</button>
+        </div>
+      </div>
+      <button class="primary" data-start="alternateNostril">Starten</button>
+    </div>
+
+    <div class="card technique-card" data-technique="bhramari">
+      <span class="last-used-tag" style="display:none">Zuletzt</span>
+      <div class="tc-head">
+        <div class="tc-title">Bienenatmung</div>
+        <div class="tc-duration" id="tc-duration-bhramari"></div>
+      </div>
+      <div class="tc-desc">Sanftes Summen beim Ausatmen (Bhramari) erhöht nachweislich das Stickstoffmonoxid in der Nase. Einatmen durch die Nase, beim Ausatmen bei geschlossenem Mund summen.</div>
+      <div class="tc-rounds-row">
+        <span class="tc-rounds-label">Runden</span>
+        <div class="stepper compact">
+          <button data-round-step="bhramari" data-dir="-1">&minus;</button>
+          <span class="value" id="tc-rounds-bhramari">6</span>
+          <button data-round-step="bhramari" data-dir="1">+</button>
+        </div>
+      </div>
+      <button class="primary" data-start="bhramari">Starten</button>
+    </div>
+
     <div class="card technique-card" data-technique="custom">
       <span class="last-used-tag" style="display:none">Zuletzt</span>
       <div class="tc-head">
@@ -445,7 +517,7 @@
   var DEFAULT_SETTINGS = {
     theme: 'system',
     lastTechniqueId: null,
-    techniqueRounds: { box: 6, fourSevenEight: 4, coherent: 10 },
+    techniqueRounds: { box: 6, fourSevenEight: 4, coherent: 10, physiologicalSigh: 5, extendedExhale: 8, alternateNostril: 8, bhramari: 6 },
     customPattern: { inhale: 4, hold1: 0, exhale: 6, hold2: 0, rounds: 8 }
   };
   var settings = Object.assign({}, DEFAULT_SETTINGS, loadJSON('breathewell.settings.v1', {}));
@@ -548,32 +620,56 @@
   });
 
   // ---------- Technique data model ----------
+  // 'inhale2' ist ein optionaler kurzer zweiter Einatmer direkt nach
+  // 'inhale' (0 Sekunden = uebersprungen, wie alle anderen Phasen) - einzig
+  // dafuer da, den Physiological Sigh (kurzer Nachatmer, dann langes
+  // Ausatmen) als reinen Datensatz statt Sonderfall im Engine-Code
+  // abzubilden.
   var PHASE_META = {
-    inhale: { label: 'Einatmen', visual: 'grow' },
-    hold1:  { label: 'Halten',   visual: 'hold-expanded', hint: 'Luft halten' },
-    exhale: { label: 'Ausatmen', visual: 'shrink' },
-    hold2:  { label: 'Halten',   visual: 'hold-contracted', hint: 'Leer halten' }
+    inhale:  { label: 'Einatmen',  visual: 'grow' },
+    inhale2: { label: 'Nachatmen', visual: 'grow', hint: 'Kurz durch die Nase nachatmen' },
+    hold1:   { label: 'Halten',    visual: 'hold-expanded', hint: 'Luft halten' },
+    exhale:  { label: 'Ausatmen',  visual: 'shrink' },
+    hold2:   { label: 'Halten',    visual: 'hold-contracted', hint: 'Leer halten' }
   };
-  var PHASE_ORDER = ['inhale', 'hold1', 'exhale', 'hold2'];
+  var PHASE_ORDER = ['inhale', 'inhale2', 'hold1', 'exhale', 'hold2'];
 
-  // 'nose' | 'mouth' | 'both' pro Ein-/Ausatmen - fliesst in den
+  // 'nose' | 'mouth' | 'both' | 'hum' pro Ein-/Ausatmen - fliesst in den
   // Phasen-Hinweistext waehrend der Session ein (siehe resolveTechnique).
   var BREATH_METHOD = {
     box: { inhale: 'nose', exhale: 'nose' },
     fourSevenEight: { inhale: 'nose', exhale: 'mouth' },
     coherent: { inhale: 'nose', exhale: 'nose' },
+    physiologicalSigh: { inhale: 'nose', exhale: 'mouth' },
+    extendedExhale: { inhale: 'nose', exhale: 'nose' },
+    alternateNostril: { inhale: 'nose', exhale: 'nose' },
+    bhramari: { inhale: 'nose', exhale: 'hum' },
     custom: { inhale: 'both', exhale: 'both' }
   };
   function breathHint(verb, method) {
     if (method === 'nose') return verb === 'inhale' ? 'Einatmen durch die Nase' : 'Ausatmen durch die Nase';
     if (method === 'mouth') return verb === 'inhale' ? 'Einatmen durch den Mund' : 'Hörbar ausatmen durch den Mund';
+    if (method === 'hum') return 'Beim Ausatmen mit geschlossenem Mund summen';
     return verb === 'inhale' ? 'Einatmen, Nase oder Mund' : 'Ausatmen, Nase oder Mund';
+  }
+  // Wechselatmung: Seite alterniert pro Runde statt pro Technik-Definition,
+  // deshalb eigene Hint-Funktion statt eines fixen BREATH_METHOD-Eintrags.
+  function nostrilHint(verb, roundIndex) {
+    var leftFirst = roundIndex % 2 === 0;
+    if (verb === 'inhale') {
+      return leftFirst ? 'Einatmen: linkes Nasenloch (rechtes zuhalten)' : 'Einatmen: rechtes Nasenloch (linkes zuhalten)';
+    }
+    return leftFirst ? 'Ausatmen: rechtes Nasenloch (linkes zuhalten)' : 'Ausatmen: linkes Nasenloch (rechtes zuhalten)';
   }
 
   var TECHNIQUES = {
     box: { id: 'box', label: 'Box Breathing', seconds: { inhale: 4, hold1: 4, exhale: 4, hold2: 4 }, editable: false },
     fourSevenEight: { id: 'fourSevenEight', label: '4-7-8 Atmung', seconds: { inhale: 4, hold1: 7, exhale: 8, hold2: 0 }, editable: false },
     coherent: { id: 'coherent', label: 'Coherent Breathing', seconds: { inhale: 5.5, hold1: 0, exhale: 5.5, hold2: 0 }, editable: false },
+    physiologicalSigh: { id: 'physiologicalSigh', label: 'Physiological Sigh', seconds: { inhale: 2, inhale2: 1, hold1: 0, exhale: 6, hold2: 0 }, editable: false },
+    extendedExhale: { id: 'extendedExhale', label: 'Verlängertes Ausatmen', seconds: { inhale: 4, hold1: 0, exhale: 8, hold2: 0 }, editable: false },
+    alternateNostril: { id: 'alternateNostril', label: 'Wechselatmung', seconds: { inhale: 4, hold1: 2, exhale: 4, hold2: 0 }, editable: false, alternates: true },
+    bhramari: { id: 'bhramari', label: 'Bienenatmung', seconds: { inhale: 4, hold1: 0, exhale: 6, hold2: 0 }, editable: false },
     custom: { id: 'custom', label: 'Eigenes Muster', seconds: null, editable: true }
   };
 
@@ -589,7 +685,7 @@
                : meta.hint;
       return { key: k, label: meta.label, visual: meta.visual, hint: hint, seconds: secondsSrc[k] };
     });
-    return { id: t.id, label: t.label, phases: phases, rounds: rounds, editable: t.editable };
+    return { id: t.id, label: t.label, phases: phases, rounds: rounds, editable: t.editable, alternates: !!t.alternates };
   }
   function techniqueLabel(id) { return TECHNIQUES[id] ? TECHNIQUES[id].label : 'Unbekannt'; }
   function techniqueTotalSeconds(tech) {
@@ -634,6 +730,7 @@
   function startSession(tech) {
     session = {
       techniqueId: tech.id, phases: tech.phases, roundCount: tech.rounds,
+      alternates: tech.alternates,
       roundIndex: 0, phaseIndex: 0, stage: 'ready',
       startedAt: Date.now(), phaseStartEpoch: Date.now(),
       _lastReadyShown: null, _lastCountShown: null
@@ -673,7 +770,11 @@
     var phase = session.phases[session.phaseIndex];
     document.getElementById('screen-session').className = 'screen active stage-active visual-' + phase.visual;
     document.getElementById('pacer-label').textContent = phase.label;
-    document.getElementById('phase-hint').textContent = phase.hint;
+    var hint = phase.hint;
+    if (session.alternates && (phase.key === 'inhale' || phase.key === 'exhale')) {
+      hint = nostrilHint(phase.key, session.roundIndex);
+    }
+    document.getElementById('phase-hint').textContent = hint;
     document.getElementById('pacer-circle').classList.toggle('empty', phase.visual === 'shrink' || phase.visual === 'hold-contracted');
   }
 
@@ -756,7 +857,7 @@
       ? '<div class="streak-badge">🔥 <span class="n">' + cur + '</span> Tage Streak</div>'
       : '';
 
-    ['box', 'fourSevenEight', 'coherent'].forEach(function (id) {
+    ['box', 'fourSevenEight', 'coherent', 'physiologicalSigh', 'extendedExhale', 'alternateNostril', 'bhramari'].forEach(function (id) {
       var tech = resolveTechnique(id);
       document.getElementById('tc-rounds-' + id).textContent = String(tech.rounds);
       document.getElementById('tc-duration-' + id).textContent = '≈ ' + formatClock(techniqueTotalSeconds(tech));
@@ -784,7 +885,9 @@
   }
 
   var ROUNDS_META = {
-    box: { min: 1, max: 20 }, fourSevenEight: { min: 1, max: 20 }, coherent: { min: 1, max: 30 }
+    box: { min: 1, max: 20 }, fourSevenEight: { min: 1, max: 20 }, coherent: { min: 1, max: 30 },
+    physiologicalSigh: { min: 1, max: 10 }, extendedExhale: { min: 1, max: 20 },
+    alternateNostril: { min: 2, max: 20 }, bhramari: { min: 1, max: 20 }
   };
   document.querySelectorAll('[data-round-step]').forEach(function (btn) {
     btn.addEventListener('click', function () {

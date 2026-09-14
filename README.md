@@ -43,20 +43,37 @@ direkt öffnen). `?fast=1` an die URL anhängen, um alle Phasen-Dauern durch
 ## Technik-Engine
 
 Eine Atemtechnik ist ein Eintrag in `TECHNIQUES` (Sekunden pro Phase +
-Rundenzahl). Vier Phasen-Slots in fester Reihenfolge -
-`inhale → hold1 → exhale → hold2` - jede mit `seconds: 0` überspringbar:
+Rundenzahl). Fünf Phasen-Slots in fester Reihenfolge -
+`inhale → inhale2 → hold1 → exhale → hold2` - jede mit `seconds: 0`
+überspringbar (`inhale2` ist ein optionaler kurzer zweiter Einatmer direkt
+nach `inhale`, einzig für den Physiological Sigh gebraucht):
 
 - **Box Breathing**: 4-4-4-4.
 - **4-7-8**: 4s ein / 7s halten / 8s aus (kein zweiter Hold).
 - **Coherent Breathing**: 5.5s ein / 5.5s aus (keine Holds).
-- **Eigenes Muster**: alle vier Werte + Rundenzahl frei einstellbar
-  (`settings.customPattern`).
+- **Physiological Sigh**: 2s ein, 1s kurz nachatmen, 6s aus - Huberman/
+  Feldman, per Stanford-RCT 2023 (Cell Reports Medicine) belegt als
+  schnellster Weg, akuten Stress zu senken.
+- **Verlängertes Ausatmen**: 4s ein / 8s aus, keine Holds - einfaches
+  1:2-Verhältnis, aktiviert über den langen Ausatem den Vagusnerv (Nestor,
+  *Breath*).
+- **Wechselatmung** (Nadi Shodhana): 4s ein / 2s halten / 4s aus, Seite
+  (links/rechts) wechselt pro Runde - klassische Yoga-Technik.
+- **Bienenatmung** (Bhramari): 4s ein / 6s aus mit Summen - erhöht laut
+  Forschung das Stickstoffmonoxid in der Nase (Nestor, *Breath*).
+- **Eigenes Muster**: `inhale`/`hold1`/`exhale`/`hold2` + Rundenzahl frei
+  einstellbar (`settings.customPattern`; `inhale2` bewusst nicht im
+  Custom-Editor, um das Formular einfach zu halten).
 
 `resolveTechnique(id)` löst das auf ein Phasen-Array auf; die
 Session-Engine (`startSession`/`tickActive`/`advancePhase`) kennt keine
 technik-spezifischen Fälle, sondern läuft nur die Phasenliste ab - eine neue
-Technik braucht später nur einen neuen `TECHNIQUES`-Eintrag, keine neue
-Engine-Logik.
+Technik braucht in der Regel nur einen neuen `TECHNIQUES`-Eintrag, keine
+neue Engine-Logik. Einzige Ausnahme ist die Wechselatmung: ihr
+`alternates: true`-Flag lässt `beginPhaseVisuals()` den Hinweistext für
+Ein-/Ausatmen abhängig von `session.roundIndex` (gerade/ungerade) per
+`nostrilHint()` statt per `phase.hint` berechnen, weil die Seite pro Runde
+wechselt statt technik-fest zu sein.
 
 Anders als bei ice-breaths Wim-Hof-Zyklus endet hier jede Runde immer in
 einem "leere Lunge"-Zustand (Ausatmen oder Halten-nach-Ausatmen), die
@@ -94,19 +111,25 @@ Kalendertagbasiert (`dayKey()` + sortierte Menge distinkter Tage), DST-sicher
 über Tages-Arithmetik statt roher Millisekunden-Differenzen - identisch zu
 ice-breaths Implementierung.
 
-## Aktueller Stand (Stage 1)
+## Aktueller Stand
 
-Vier Techniken (Box, 4-7-8, Coherent, Custom), rein visueller Pacer ohne
-Audio, Verlauf mit Streak + Technik-Breakdown, Theme
-System/Hell/Dunkel. Noch nicht auf dem Pixel 11 Pro geräte-getestet -
-nächster Schritt: Release-APK bauen und die Geräte-Checkliste (Portrait-Lock,
-Keep-Screen-On über volle Session-Dauer, Android-Zurück während aktiver
-Session, Light/Dark-Darstellung) durchgehen.
+**Stage 1** (device-getestet auf dem Pixel 11 Pro, Feedback eingearbeitet):
+Box, 4-7-8, Coherent, Custom; rein visueller Pacer ohne Audio; Verlauf mit
+Streak + Technik-Breakdown; Theme System/Hell/Dunkel; Nase/Mund-Hinweise pro
+Technik; Predictive-Back-Fix für die Zurück-Wischgeste (siehe
+[apk-builder/CLAUDE.md](../apk-builder/CLAUDE.md)).
+
+**Stage 2 - mehr Techniken** (gebaut, noch nicht geräte-getestet): vier
+recherchierte, evidenzbasierte Techniken ergänzt - Physiological Sigh,
+Verlängertes Ausatmen, Wechselatmung, Bienenatmung (Details siehe
+"Technik-Engine" oben). Geplante Reihenfolge der nächsten Stages laut
+Nutzer: mehr Techniken (diese Stage) → Vibration → Audio → Reminder →
+geführte Programme/Kurse.
 
 ## Bewusst zurückgestellt
 
 Audio-Cues/Sprachführung, geführte Programme/Kurse, ein Technik-Builder über
-die vier Zahlenfelder hinaus, Reminders/Benachrichtigungen, weitere
-Techniken über das Kernset hinaus, Wim Hof (das deckt ice-breath ab),
-Vibration (kein Bedarf angemeldet, VIBRATE-Permission ist durch das
-apk-builder-Template ohnehin gesetzt, aber ungenutzt).
+die vier Zahlenfelder hinaus, Reminders/Benachrichtigungen, Wim Hof (das
+deckt ice-breath ab), Vibration (als nächste Stage geplant, siehe oben -
+VIBRATE-Permission ist durch das apk-builder-Template ohnehin schon gesetzt,
+aber noch ungenutzt).
