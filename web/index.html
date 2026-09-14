@@ -215,7 +215,7 @@
         <div class="tc-title">Box Breathing</div>
         <div class="tc-duration" id="tc-duration-box"></div>
       </div>
-      <div class="tc-desc">4-4-4-4 Sekunden &ndash; beruhigt und fokussiert. Ein- und ausatmen durch die Nase.</div>
+      <div class="tc-desc"><span id="tc-pattern-box">4-4-4-4</span> Sekunden &ndash; beruhigt und fokussiert. Ein- und ausatmen durch die Nase.</div>
       <div class="tc-rounds-row">
         <span class="tc-rounds-label">Runden</span>
         <div class="stepper compact">
@@ -287,7 +287,7 @@
         <div class="tc-title">Verlängertes Ausatmen</div>
         <div class="tc-duration" id="tc-duration-extendedExhale"></div>
       </div>
-      <div class="tc-desc">Einfaches 1:2-Verhältnis (4 ein, 8 aus) ohne Halten &ndash; der lange Ausatem aktiviert den Vagusnerv. Ein- und ausatmen durch die Nase.</div>
+      <div class="tc-desc">Einfaches 1:2-Verhältnis (<span id="tc-pattern-extendedExhale">4 ein, 8 aus</span>) ohne Halten &ndash; der lange Ausatem aktiviert den Vagusnerv. Ein- und ausatmen durch die Nase.</div>
       <div class="tc-rounds-row">
         <span class="tc-rounds-label">Runden</span>
         <div class="stepper compact">
@@ -582,11 +582,25 @@
     reminderOn: false,
     reminderTime: '08:00',
     techniqueRounds: { box: 6, fourSevenEight: 4, coherent: 10, physiologicalSigh: 5, extendedExhale: 8, alternateNostril: 8, bhramari: 6, bellows: 20 },
+    // Nur fuer TECHNIQUES-Eintraege mit scaleSeconds:true (Box, Verlaengertes
+    // Ausatmen) - deren Sekunden sind reine Verhaeltnis-Techniken ohne
+    // vorgeschriebene Zahl, im Gegensatz zu z.B. 4-7-8 oder Physiological
+    // Sigh, wo die Sekunden das eigentliche, forschungsbasierte Protokoll
+    // sind und deshalb fest bleiben.
+    techniqueSeconds: {
+      box: { inhale: 4, hold1: 4, exhale: 4, hold2: 4 },
+      extendedExhale: { inhale: 4, hold1: 0, exhale: 8, hold2: 0 }
+    },
     customPattern: { inhale: 4, hold1: 0, exhale: 6, hold2: 0, rounds: 8 }
   };
-  var settings = Object.assign({}, DEFAULT_SETTINGS, loadJSON('breathewell.settings.v1', {}));
-  settings.techniqueRounds = Object.assign({}, DEFAULT_SETTINGS.techniqueRounds, settings.techniqueRounds || {});
-  settings.customPattern = Object.assign({}, DEFAULT_SETTINGS.customPattern, settings.customPattern || {});
+  var storedSettings = loadJSON('breathewell.settings.v1', {});
+  var settings = Object.assign({}, DEFAULT_SETTINGS, storedSettings);
+  settings.techniqueRounds = Object.assign({}, DEFAULT_SETTINGS.techniqueRounds, storedSettings.techniqueRounds || {});
+  settings.customPattern = Object.assign({}, DEFAULT_SETTINGS.customPattern, storedSettings.customPattern || {});
+  settings.techniqueSeconds = {};
+  Object.keys(DEFAULT_SETTINGS.techniqueSeconds).forEach(function (id) {
+    settings.techniqueSeconds[id] = Object.assign({}, DEFAULT_SETTINGS.techniqueSeconds[id], (storedSettings.techniqueSeconds || {})[id] || {});
+  });
   var sessions = loadJSON('breathewell.sessions.v1', []);
 
   function persistSettings() { saveJSON('breathewell.settings.v1', settings); }
@@ -760,11 +774,11 @@
   }
 
   var TECHNIQUES = {
-    box: { id: 'box', label: 'Box Breathing', seconds: { inhale: 4, hold1: 4, exhale: 4, hold2: 4 }, editable: false },
+    box: { id: 'box', label: 'Box Breathing', seconds: { inhale: 4, hold1: 4, exhale: 4, hold2: 4 }, editable: false, scaleSeconds: true },
     fourSevenEight: { id: 'fourSevenEight', label: '4-7-8 Atmung', seconds: { inhale: 4, hold1: 7, exhale: 8, hold2: 0 }, editable: false },
     coherent: { id: 'coherent', label: 'Coherent Breathing', seconds: { inhale: 5.5, hold1: 0, exhale: 5.5, hold2: 0 }, editable: false },
     physiologicalSigh: { id: 'physiologicalSigh', label: 'Physiological Sigh', seconds: { inhale: 2, inhale2: 1, hold1: 0, exhale: 6, hold2: 0 }, editable: false },
-    extendedExhale: { id: 'extendedExhale', label: 'Verlängertes Ausatmen', seconds: { inhale: 4, hold1: 0, exhale: 8, hold2: 0 }, editable: false },
+    extendedExhale: { id: 'extendedExhale', label: 'Verlängertes Ausatmen', seconds: { inhale: 4, hold1: 0, exhale: 8, hold2: 0 }, editable: false, scaleSeconds: true },
     alternateNostril: { id: 'alternateNostril', label: 'Wechselatmung', seconds: { inhale: 4, hold1: 2, exhale: 4, hold2: 0 }, editable: false, alternates: true },
     bhramari: { id: 'bhramari', label: 'Bienenatmung', seconds: { inhale: 4, hold1: 0, exhale: 6, hold2: 0 }, editable: false },
     bellows: { id: 'bellows', label: 'Bellows Breath', seconds: { inhale: 1, hold1: 0, exhale: 1, hold2: 0 }, editable: false },
@@ -773,7 +787,7 @@
 
   function resolveTechnique(id) {
     var t = TECHNIQUES[id];
-    var secondsSrc = t.editable ? settings.customPattern : t.seconds;
+    var secondsSrc = t.editable ? settings.customPattern : (t.scaleSeconds ? settings.techniqueSeconds[id] : t.seconds);
     var rounds = t.editable ? settings.customPattern.rounds : settings.techniqueRounds[id];
     var method = BREATH_METHOD[id];
     var phases = PHASE_ORDER.filter(function (k) { return secondsSrc[k] > 0; }).map(function (k) {
@@ -783,7 +797,7 @@
                : meta.hint;
       return { key: k, label: meta.label, visual: meta.visual, hint: hint, seconds: secondsSrc[k] };
     });
-    return { id: t.id, label: t.label, phases: phases, rounds: rounds, editable: t.editable, alternates: !!t.alternates };
+    return { id: t.id, label: t.label, phases: phases, rounds: rounds, editable: t.editable, alternates: !!t.alternates, scaleSeconds: !!t.scaleSeconds };
   }
   function techniqueLabel(id) { return TECHNIQUES[id] ? TECHNIQUES[id].label : 'Unbekannt'; }
   function techniqueTotalSeconds(tech) {
@@ -962,6 +976,9 @@
       document.getElementById('tc-rounds-' + id).textContent = String(tech.rounds);
       document.getElementById('tc-duration-' + id).textContent = '≈ ' + formatClock(techniqueTotalSeconds(tech));
     });
+    document.getElementById('tc-pattern-box').textContent = formatSecondsPattern('box');
+    var ee = settings.techniqueSeconds.extendedExhale;
+    document.getElementById('tc-pattern-extendedExhale').textContent = ee.inhale + ' ein, ' + ee.exhale + ' aus';
 
     var custom = resolveTechnique('custom');
     document.getElementById('tc-duration-custom').textContent = custom.phases.length
@@ -1104,16 +1121,38 @@
     if (id === 'custom') settings.customPattern.rounds = value;
     else settings.techniqueRounds[id] = value;
   }
+  // scaleSeconds-Techniken (Box, Verlaengertes Ausatmen) sind reine
+  // Verhaeltnis-Techniken - dort steigert Feedback die Tiefe (alle aktiven
+  // Phasen gemeinsam +-1s), nicht die Rundenzahl. Alle anderen behalten ihre
+  // forschungsbasierten Sekundenwerte fest und aendern stattdessen die
+  // Rundenzahl (siehe roundsBoundsFor/setRoundsFor oben).
+  var SECONDS_MIN = 2, SECONDS_MAX = 14;
+  function adjustSeconds(id, delta) {
+    var stored = settings.techniqueSeconds[id];
+    PHASE_ORDER.forEach(function (k) {
+      if (stored[k] > 0) stored[k] = Math.max(SECONDS_MIN, Math.min(SECONDS_MAX, stored[k] + delta));
+    });
+  }
+  function formatSecondsPattern(id) {
+    return resolveTechnique(id).phases.map(function (p) { return p.seconds; }).join('-');
+  }
   document.querySelectorAll('#screen-summary [data-feedback]').forEach(function (btn) {
     btn.addEventListener('click', function () {
       if (!lastRecord) return;
       var id = lastRecord.techniqueId;
-      var bounds = roundsBoundsFor(id);
       var delta = btn.getAttribute('data-feedback') === 'easy' ? 1 : btn.getAttribute('data-feedback') === 'hard' ? -1 : 0;
-      var next = Math.max(bounds.min, Math.min(bounds.max, resolveTechnique(id).rounds + delta));
-      setRoundsFor(id, next);
+      var resultText;
+      if (TECHNIQUES[id] && TECHNIQUES[id].scaleSeconds) {
+        adjustSeconds(id, delta);
+        resultText = 'Nächstes Mal ' + formatSecondsPattern(id) + ' Sekunden.';
+      } else {
+        var bounds = roundsBoundsFor(id);
+        var next = Math.max(bounds.min, Math.min(bounds.max, resolveTechnique(id).rounds + delta));
+        setRoundsFor(id, next);
+        resultText = 'Nächstes Mal ' + next + ' Runden.';
+      }
       persistSettings();
-      document.getElementById('feedback-result').textContent = 'Nächstes Mal ' + next + ' Runden.';
+      document.getElementById('feedback-result').textContent = resultText;
     });
   });
 

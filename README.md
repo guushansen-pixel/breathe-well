@@ -191,16 +191,34 @@ getaktete Engine.
 Audio ist als Nächstes dran, sobald es getestet werden kann (verschoben,
 weil beim Bauen "alle schlafen").
 
-## Adaptive Rundenzahl (Stage 6)
+## Adaptive Rundenzahl / Sekunden (Stage 6)
 
 Auf dem Summary-Screen fragt "Wie war die Session?" (zu leicht / passt genau
-/ zu schwer) nach jeder abgeschlossenen Session. Die Antwort verändert
-direkt `techniqueRounds[id]` (bzw. `customPattern.rounds` für "custom") um
-±1, geclampt an dieselben Grenzen wie die Home-Karten-Stepper
-(`ROUNDS_META` / `CUSTOM_STEPPER_META.rounds`) - kein eigenes Datenmodell,
-keine Historie/Glättung über mehrere Sessions, nur ein direkter Nudge fürs
-nächste Mal. Bewusst nur die Rundenzahl, nie einzelne Phasen-Sekunden -
-sonst würde z.B. Box Breathing selbst nicht mehr 4-4-4-4 sein.
+/ zu schwer) nach jeder abgeschlossenen Session. Was sich dadurch ändert,
+hängt von der Technik ab:
+
+- **Reine Verhältnis-Techniken** (`scaleSeconds: true` in `TECHNIQUES`: Box
+  Breathing, Verlängertes Ausatmen) - hier steigert/senkt Feedback die
+  Tiefe: alle aktiven Phasen gemeinsam um ±1s (geclampt 2-14s pro Phase,
+  `settings.techniqueSeconds[id]`). Box bleibt dabei immer gleichseitig
+  (z.B. 5-5-5-5 statt 4-4-4-4) - die Zahl ist bei diesen Techniken nicht
+  vorgeschrieben, nur das Verhältnis zählt (Idee von der App
+  [State](https://www.shiftstate.io/), die Übungen über die Zeit vertieft
+  statt nur die Wiederholungen zu erhöhen).
+- **Alle anderen Techniken** (4-7-8, Coherent, Physiological Sigh,
+  Wechselatmung, Bienenatmung, Bellows, Custom) - hier ändert Feedback
+  stattdessen `techniqueRounds[id]` (bzw. `customPattern.rounds`) um ±1,
+  geclampt an `ROUNDS_META`/`CUSTOM_STEPPER_META.rounds`. Deren Sekunden
+  bleiben immer fest, weil sie das eigentliche, forschungsbasierte oder
+  namensgebende Protokoll sind (4-7-8 ist per Definition 4-7-8, die
+  Physiological-Sigh-Zeiten kommen aus der Stanford-Studie, Coherent
+  Breathing ist auf die Resonanzfrequenz kalibriert) - eine willkürliche
+  Sekundenänderung würde die Technik entweder falsch benennen oder ihre
+  Evidenzbasis verlassen.
+
+Kein eigenes Session-Datenmodell, keine Glättung über mehrere Sessions -
+nur ein direkter Nudge fürs nächste Mal, über dieselben Werte, die auch die
+Home-Karten-Stepper/der Custom-Editor schon bedienen.
 
 ## Kurse/Programme (Stage 5) - Brainstorm, noch nicht gebaut
 
