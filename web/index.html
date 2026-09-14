@@ -115,9 +115,13 @@
   .tc-rounds-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
   .tc-rounds-label { font-size: 0.9em; color: var(--fg-dim); }
 
-  /* --- Session screen --- */
-  #screen-session { padding: 0; position: relative; transition: background-color 0.6s ease; touch-action: none; }
-  #screen-session.stage-ready        { background: var(--bg2); }
+  /* --- Session screen ---
+     Bewusst theme-unabhaengig immer dunkel (Fokus-Modus): sonst wird der
+     helle Modus zur Kontrastfalle, weil Ready-Hintergrund/Text sonst
+     zwischen hell und dunkel wechseln wuerden, waehrend Button/Hint-Texte
+     fest hell codiert sind. */
+  #screen-session { padding: 0; position: relative; transition: background-color 0.6s ease; touch-action: none; color: #F3F0FF; }
+  #screen-session.stage-ready        { background: #1B1440; }
   #screen-session.visual-grow            { background: #241C55; }
   #screen-session.visual-hold-expanded   { background: #170F2E; }
   #screen-session.visual-shrink          { background: #1B2A4A; }
@@ -128,7 +132,7 @@
     padding: 18px 18px 0;
     padding-top: calc(18px + env(safe-area-inset-top, 0px));
   }
-  .session-top button { background: rgba(0,0,0,0.28); color: var(--fg); border: none; border-radius: 10px; padding: 10px 14px; font-size: 0.9em; }
+  .session-top button { background: rgba(0,0,0,0.28); color: rgba(255,255,255,0.92); border: none; border-radius: 10px; padding: 10px 14px; font-size: 0.9em; }
   .round-indicator { font-size: 1.05em; color: rgba(255,255,255,0.85); padding-top: 12px; }
 
   .session-view { display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; }
@@ -196,7 +200,7 @@
         <div class="tc-title">Box Breathing</div>
         <div class="tc-duration" id="tc-duration-box"></div>
       </div>
-      <div class="tc-desc">4-4-4-4 Sekunden &ndash; beruhigt und fokussiert.</div>
+      <div class="tc-desc">4-4-4-4 Sekunden &ndash; beruhigt und fokussiert. Ein- und ausatmen durch die Nase.</div>
       <div class="tc-rounds-row">
         <span class="tc-rounds-label">Runden</span>
         <div class="stepper compact">
@@ -214,7 +218,7 @@
         <div class="tc-title">4-7-8 Atmung</div>
         <div class="tc-duration" id="tc-duration-fourSevenEight"></div>
       </div>
-      <div class="tc-desc">Löst Anspannung, hilft beim Einschlafen.</div>
+      <div class="tc-desc">Löst Anspannung, hilft beim Einschlafen. Einatmen durch die Nase, ausatmen hörbar durch den Mund.</div>
       <div class="tc-rounds-row">
         <span class="tc-rounds-label">Runden</span>
         <div class="stepper compact">
@@ -232,7 +236,7 @@
         <div class="tc-title">Coherent Breathing</div>
         <div class="tc-duration" id="tc-duration-coherent"></div>
       </div>
-      <div class="tc-desc">Gleichmäßiger Rhythmus für Ruhe &amp; Fokus.</div>
+      <div class="tc-desc">Gleichmäßiger Rhythmus für Ruhe &amp; Fokus. Ein- und ausatmen durch die Nase.</div>
       <div class="tc-rounds-row">
         <span class="tc-rounds-label">Runden</span>
         <div class="stepper compact">
@@ -545,12 +549,26 @@
 
   // ---------- Technique data model ----------
   var PHASE_META = {
-    inhale: { label: 'Einatmen', visual: 'grow', hint: 'Ruhig einatmen' },
+    inhale: { label: 'Einatmen', visual: 'grow' },
     hold1:  { label: 'Halten',   visual: 'hold-expanded', hint: 'Luft halten' },
-    exhale: { label: 'Ausatmen', visual: 'shrink', hint: 'Langsam ausatmen' },
+    exhale: { label: 'Ausatmen', visual: 'shrink' },
     hold2:  { label: 'Halten',   visual: 'hold-contracted', hint: 'Leer halten' }
   };
   var PHASE_ORDER = ['inhale', 'hold1', 'exhale', 'hold2'];
+
+  // 'nose' | 'mouth' | 'both' pro Ein-/Ausatmen - fliesst in den
+  // Phasen-Hinweistext waehrend der Session ein (siehe resolveTechnique).
+  var BREATH_METHOD = {
+    box: { inhale: 'nose', exhale: 'nose' },
+    fourSevenEight: { inhale: 'nose', exhale: 'mouth' },
+    coherent: { inhale: 'nose', exhale: 'nose' },
+    custom: { inhale: 'both', exhale: 'both' }
+  };
+  function breathHint(verb, method) {
+    if (method === 'nose') return verb === 'inhale' ? 'Einatmen durch die Nase' : 'Ausatmen durch die Nase';
+    if (method === 'mouth') return verb === 'inhale' ? 'Einatmen durch den Mund' : 'Hörbar ausatmen durch den Mund';
+    return verb === 'inhale' ? 'Einatmen, Nase oder Mund' : 'Ausatmen, Nase oder Mund';
+  }
 
   var TECHNIQUES = {
     box: { id: 'box', label: 'Box Breathing', seconds: { inhale: 4, hold1: 4, exhale: 4, hold2: 4 }, editable: false },
@@ -563,8 +581,13 @@
     var t = TECHNIQUES[id];
     var secondsSrc = t.editable ? settings.customPattern : t.seconds;
     var rounds = t.editable ? settings.customPattern.rounds : settings.techniqueRounds[id];
+    var method = BREATH_METHOD[id];
     var phases = PHASE_ORDER.filter(function (k) { return secondsSrc[k] > 0; }).map(function (k) {
-      return { key: k, label: PHASE_META[k].label, visual: PHASE_META[k].visual, hint: PHASE_META[k].hint, seconds: secondsSrc[k] };
+      var meta = PHASE_META[k];
+      var hint = k === 'inhale' ? breathHint('inhale', method.inhale)
+               : k === 'exhale' ? breathHint('exhale', method.exhale)
+               : meta.hint;
+      return { key: k, label: meta.label, visual: meta.visual, hint: hint, seconds: secondsSrc[k] };
     });
     return { id: t.id, label: t.label, phases: phases, rounds: rounds, editable: t.editable };
   }
