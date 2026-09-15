@@ -709,14 +709,29 @@
   // ---------- App / navigation state ----------
   var state = { screen: 'home' };
 
+  // Hoechstens EIN "weg vom Home"-Eintrag im Verlauf: Android-Zurueck ruft
+  // webView.goBack(), solange es Eintraege gibt - stapelten sie sich (jeder
+  // Screen-Wechsel ein neuer, keiner je entfernt), musste man auf dem
+  // Home-Screen mehrfach Zurueck druecken, bis die App schliesst.
   function showScreen(name, opts) {
     opts = opts || {};
     document.querySelectorAll('.screen').forEach(function (el) { el.classList.remove('active'); });
     document.getElementById('screen-' + name).classList.add('active');
     state.screen = name;
-    if (opts.pushHistory !== false && name !== 'home') {
+    if (opts.pushHistory !== false && name !== 'home' && !history.state) {
       try { history.pushState({ screen: name }, ''); } catch (e) {}
     }
+  }
+
+  // In-App-Wege zurueck zum Home: den eigenen Verlaufseintrag per
+  // history.back() abbauen und die Navigation dem popstate-Handler
+  // ueberlassen, statt den Eintrag liegen zu lassen.
+  function goHome() {
+    if (history.state) {
+      try { history.back(); return; } catch (e) {}
+    }
+    showScreen('home', { pushHistory: false });
+    renderHome();
   }
 
   window.addEventListener('popstate', function () {
@@ -778,7 +793,7 @@
     fourSevenEight: { id: 'fourSevenEight', label: '4-7-8 Atmung', seconds: { inhale: 4, hold1: 7, exhale: 8, hold2: 0 }, editable: false },
     coherent: { id: 'coherent', label: 'Coherent Breathing', seconds: { inhale: 5.5, hold1: 0, exhale: 5.5, hold2: 0 }, editable: false },
     physiologicalSigh: { id: 'physiologicalSigh', label: 'Physiological Sigh', seconds: { inhale: 2, inhale2: 1, hold1: 0, exhale: 6, hold2: 0 }, editable: false },
-    extendedExhale: { id: 'extendedExhale', label: 'Verlängertes Ausatmen', seconds: { inhale: 4, hold1: 0, exhale: 8, hold2: 0 }, editable: false, scaleSeconds: true },
+    extendedExhale: { id: 'extendedExhale', label: 'Verlängertes Ausatmen', seconds: { inhale: 4, hold1: 0, exhale: 8, hold2: 0 }, editable: false, scaleSeconds: true, exhaleRatio: 2 },
     alternateNostril: { id: 'alternateNostril', label: 'Wechselatmung', seconds: { inhale: 4, hold1: 2, exhale: 4, hold2: 0 }, editable: false, alternates: true },
     bhramari: { id: 'bhramari', label: 'Bienenatmung', seconds: { inhale: 4, hold1: 0, exhale: 6, hold2: 0 }, editable: false },
     bellows: { id: 'bellows', label: 'Bellows Breath', seconds: { inhale: 1, hold1: 0, exhale: 1, hold2: 0 }, editable: false },
@@ -790,12 +805,20 @@
     var secondsSrc = t.editable ? settings.customPattern : (t.scaleSeconds ? settings.techniqueSeconds[id] : t.seconds);
     var rounds = t.editable ? settings.customPattern.rounds : settings.techniqueRounds[id];
     var method = BREATH_METHOD[id];
-    var phases = PHASE_ORDER.filter(function (k) { return secondsSrc[k] > 0; }).map(function (k) {
+    var keys = PHASE_ORDER.filter(function (k) { return secondsSrc[k] > 0; });
+    // Mit Nachatmer (Physiological Sigh) fuellt der erste Einatmer den Kreis
+    // nur teilweise und 'inhale2' setzt dort fort - sonst spraenge der Kreis
+    // zwischen beiden Einatmern auf klein zurueck und wuechse erneut.
+    var hasInhale2 = keys.indexOf('inhale2') !== -1;
+    var SPLIT_SCALE = 0.85;
+    var phases = keys.map(function (k) {
       var meta = PHASE_META[k];
       var hint = k === 'inhale' ? breathHint('inhale', method.inhale)
                : k === 'exhale' ? breathHint('exhale', method.exhale)
                : meta.hint;
-      return { key: k, label: meta.label, visual: meta.visual, hint: hint, seconds: secondsSrc[k] };
+      return { key: k, label: meta.label, visual: meta.visual, hint: hint, seconds: secondsSrc[k],
+               fromScale: k === 'inhale2' ? SPLIT_SCALE : 0.55,
+               toScale: (k === 'inhale' && hasInhale2) ? SPLIT_SCALE : 1.0 };
     });
     return { id: t.id, label: t.label, phases: phases, rounds: rounds, editable: t.editable, alternates: !!t.alternates, scaleSeconds: !!t.scaleSeconds };
   }
@@ -899,7 +922,7 @@
 
     var t = elapsed / totalMs;
     var circle = document.getElementById('pacer-circle');
-    if (phase.visual === 'grow') circle.style.transform = 'scale(' + (0.55 + 0.45 * easeInOut(t)).toFixed(3) + ')';
+    if (phase.visual === 'grow') circle.style.transform = 'scale(' + (phase.fromScale + (phase.toScale - phase.fromScale) * easeInOut(t)).toFixed(3) + ')';
     else if (phase.visual === 'shrink') circle.style.transform = 'scale(' + (1.0 - 0.45 * easeInOut(t)).toFixed(3) + ')';
     else if (phase.visual === 'hold-expanded') circle.style.transform = 'scale(1.000)';
     else circle.style.transform = 'scale(0.550)';
@@ -949,8 +972,7 @@
     confirmDialog('Session wirklich abbrechen? Der Fortschritt wird nicht gespeichert.', function () {
       releaseWakeLock();
       session = null;
-      showScreen('home', { pushHistory: false });
-      renderHome();
+      goHome();
     });
   }
 
@@ -1053,9 +1075,7 @@
     renderCustomForm();
     showScreen('custom');
   });
-  document.getElementById('btn-custom-back').addEventListener('click', function () {
-    showScreen('home', { pushHistory: false }); renderHome();
-  });
+  document.getElementById('btn-custom-back').addEventListener('click', goHome);
   document.getElementById('btn-custom-start').addEventListener('click', function () {
     var tech = resolveTechnique('custom');
     if (!tech.phases.length) return;
@@ -1129,6 +1149,15 @@
   var SECONDS_MIN = 2, SECONDS_MAX = 14;
   function adjustSeconds(id, delta) {
     var stored = settings.techniqueSeconds[id];
+    var ratio = TECHNIQUES[id].exhaleRatio;
+    if (ratio) {
+      // Festes Ein:Aus-Verhaeltnis (Verlaengertes Ausatmen 1:2): nur den
+      // Einatmer verschieben und den Ausatmer ableiten - sonst wird aus 4:8
+      // nach "Zu leicht" 5:9 statt 5:10.
+      stored.inhale = Math.max(SECONDS_MIN, Math.min(Math.floor(SECONDS_MAX / ratio), stored.inhale + delta));
+      stored.exhale = stored.inhale * ratio;
+      return;
+    }
     PHASE_ORDER.forEach(function (k) {
       if (stored[k] > 0) stored[k] = Math.max(SECONDS_MIN, Math.min(SECONDS_MAX, stored[k] + delta));
     });
@@ -1136,18 +1165,23 @@
   function formatSecondsPattern(id) {
     return resolveTechnique(id).phases.map(function (p) { return p.seconds; }).join('-');
   }
+  // Ausgangswerte beim Anzeigen der Summary (siehe renderSummary) - jeder
+  // Feedback-Klick rechnet von dort aus statt vom zuletzt geklickten Wert:
+  // dreimal "Zu leicht" ergibt +1 statt +3, und man kann sich umentscheiden.
+  var feedbackBase = null;
   document.querySelectorAll('#screen-summary [data-feedback]').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      if (!lastRecord) return;
+      if (!lastRecord || !feedbackBase) return;
       var id = lastRecord.techniqueId;
       var delta = btn.getAttribute('data-feedback') === 'easy' ? 1 : btn.getAttribute('data-feedback') === 'hard' ? -1 : 0;
       var resultText;
       if (TECHNIQUES[id] && TECHNIQUES[id].scaleSeconds) {
+        settings.techniqueSeconds[id] = Object.assign({}, feedbackBase.seconds);
         adjustSeconds(id, delta);
         resultText = 'Nächstes Mal ' + formatSecondsPattern(id) + ' Sekunden.';
       } else {
         var bounds = roundsBoundsFor(id);
-        var next = Math.max(bounds.min, Math.min(bounds.max, resolveTechnique(id).rounds + delta));
+        var next = Math.max(bounds.min, Math.min(bounds.max, feedbackBase.rounds + delta));
         setRoundsFor(id, next);
         resultText = 'Nächstes Mal ' + next + ' Runden.';
       }
@@ -1158,6 +1192,11 @@
 
   function renderSummary(record) {
     lastRecord = record;
+    var baseSeconds = settings.techniqueSeconds[record.techniqueId];
+    feedbackBase = {
+      rounds: resolveTechnique(record.techniqueId).rounds,
+      seconds: baseSeconds ? Object.assign({}, baseSeconds) : null
+    };
     document.getElementById('summary-technique').textContent = techniqueLabel(record.techniqueId);
     document.getElementById('summary-rounds').textContent = record.completedRounds + ' / ' + record.plannedRounds;
     document.getElementById('summary-duration').textContent = formatDurationLong((record.endedAt - record.startedAt) / 1000);
@@ -1200,12 +1239,10 @@
   // ---------- Navigation wiring ----------
   document.getElementById('btn-open-settings').addEventListener('click', function () { renderSettings(); showScreen('settings'); });
   document.getElementById('btn-open-history').addEventListener('click', function () { renderHistory(); showScreen('history'); });
-  document.getElementById('btn-settings-back').addEventListener('click', function () { showScreen('home', { pushHistory: false }); renderHome(); });
-  document.getElementById('btn-history-back').addEventListener('click', function () { showScreen('home', { pushHistory: false }); renderHome(); });
+  document.getElementById('btn-settings-back').addEventListener('click', goHome);
+  document.getElementById('btn-history-back').addEventListener('click', goHome);
   document.getElementById('btn-cancel-session').addEventListener('click', cancelSession);
-  document.getElementById('btn-summary-done').addEventListener('click', function () {
-    showScreen('home', { pushHistory: false }); renderHome();
-  });
+  document.getElementById('btn-summary-done').addEventListener('click', goHome);
 
   // ---------- Init ----------
   renderHome();

@@ -191,6 +191,15 @@ getaktete Engine.
 Audio ist als Nächstes dran, sobald es getestet werden kann (verschoben,
 weil beim Bauen "alle schlafen").
 
+**Review-Fixes (v1.7, 2026-09-15, im Browser verifiziert)**: Physiological
+Sigh - der Kreis springt zwischen Einatmen und Nachatmen nicht mehr auf klein
+zurück (Phasen haben jetzt `fromScale`/`toScale`, Einatmen 0.55→0.85,
+Nachatmen 0.85→1.0); Feedback-Knöpfe rechnen vom Ausgangswert der Summary
+aus statt zu kumulieren (dreimal "Zu leicht" = +1, nicht +3); Verlängertes
+Ausatmen behält 1:2 (siehe unten); höchstens ein Verlaufseintrag "weg vom
+Home" (`goHome()` baut ihn per `history.back()` ab) - vorher musste man auf
+dem Home mehrfach Zurück drücken, bis die App schließt.
+
 ## Adaptive Rundenzahl / Sekunden (Stage 6)
 
 Auf dem Summary-Screen fragt "Wie war die Session?" (zu leicht / passt genau
@@ -200,7 +209,10 @@ hängt von der Technik ab:
 - **Reine Verhältnis-Techniken** (`scaleSeconds: true` in `TECHNIQUES`: Box
   Breathing, Verlängertes Ausatmen) - hier steigert/senkt Feedback die
   Tiefe: alle aktiven Phasen gemeinsam um ±1s (geclampt 2-14s pro Phase,
-  `settings.techniqueSeconds[id]`). Box bleibt dabei immer gleichseitig
+  `settings.techniqueSeconds[id]`). Ausnahme mit `exhaleRatio` (Verlängertes
+  Ausatmen, 2): nur der Einatmer ändert sich, der Ausatmer wird daraus
+  abgeleitet, damit 1:2 erhalten bleibt (4-8 → 5-10, nicht 5-9). Box bleibt
+  dabei immer gleichseitig
   (z.B. 5-5-5-5 statt 4-4-4-4) - die Zahl ist bei diesen Techniken nicht
   vorgeschrieben, nur das Verhältnis zählt (Idee von der App
   [State](https://www.shiftstate.io/), die Übungen über die Zeit vertieft
