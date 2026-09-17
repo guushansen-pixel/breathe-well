@@ -335,6 +335,42 @@
       <button class="primary" data-start="bhramari">Starten</button>
     </div>
 
+    <div class="card technique-card" data-technique="sitali">
+      <span class="last-used-tag" style="display:none">Zuletzt</span>
+      <div class="tc-head">
+        <div class="tc-title">Sitali (Kühlatmung)</div>
+        <div class="tc-duration" id="tc-duration-sitali"></div>
+      </div>
+      <div class="tc-desc">Einatmen durch die aufgerollte Zunge kühlt Körper und Nerven &ndash; klassische Yoga-Technik gegen Hitze und Anspannung. Klappt die Zunge nicht: durch die Zähne (Sitkari).</div>
+      <div class="tc-rounds-row">
+        <span class="tc-rounds-label">Runden</span>
+        <div class="stepper compact">
+          <button data-round-step="sitali" data-dir="-1">&minus;</button>
+          <span class="value" id="tc-rounds-sitali">10</span>
+          <button data-round-step="sitali" data-dir="1">+</button>
+        </div>
+      </div>
+      <button class="primary" data-start="sitali">Starten</button>
+    </div>
+
+    <div class="card technique-card" data-technique="lionsBreath">
+      <span class="last-used-tag" style="display:none">Zuletzt</span>
+      <div class="tc-head">
+        <div class="tc-title">Löwenatem</div>
+        <div class="tc-duration" id="tc-duration-lionsBreath"></div>
+      </div>
+      <div class="tc-desc">Kräftiges "Ha" mit rausgestreckter Zunge &ndash; löst Kiefer-/Halsspannung, baut Frust ab, gut vor dem Reden vor Publikum. Einatmen durch die Nase.</div>
+      <div class="tc-rounds-row">
+        <span class="tc-rounds-label">Runden</span>
+        <div class="stepper compact">
+          <button data-round-step="lionsBreath" data-dir="-1">&minus;</button>
+          <span class="value" id="tc-rounds-lionsBreath">7</span>
+          <button data-round-step="lionsBreath" data-dir="1">+</button>
+        </div>
+      </div>
+      <button class="primary" data-start="lionsBreath">Starten</button>
+    </div>
+
     <div class="card technique-card" data-technique="bellows">
       <span class="last-used-tag" style="display:none">Zuletzt</span>
       <div class="tc-head">
@@ -581,7 +617,7 @@
     vibrationOn: true,
     reminderOn: false,
     reminderTime: '08:00',
-    techniqueRounds: { box: 6, fourSevenEight: 4, coherent: 10, physiologicalSigh: 5, extendedExhale: 8, alternateNostril: 8, bhramari: 6, bellows: 20 },
+    techniqueRounds: { box: 6, fourSevenEight: 4, coherent: 10, physiologicalSigh: 5, extendedExhale: 8, alternateNostril: 8, bhramari: 6, bellows: 20, sitali: 10, lionsBreath: 7 },
     // Nur fuer TECHNIQUES-Eintraege mit scaleSeconds:true (Box, Verlaengertes
     // Ausatmen) - deren Sekunden sind reine Verhaeltnis-Techniken ohne
     // vorgeschriebene Zahl, im Gegensatz zu z.B. 4-7-8 oder Physiological
@@ -759,8 +795,9 @@
   };
   var PHASE_ORDER = ['inhale', 'inhale2', 'hold1', 'exhale', 'hold2'];
 
-  // 'nose' | 'mouth' | 'both' | 'hum' pro Ein-/Ausatmen - fliesst in den
-  // Phasen-Hinweistext waehrend der Session ein (siehe resolveTechnique).
+  // 'nose' | 'mouth' | 'both' | 'hum' | 'tongue' | 'roar' pro Ein-/Ausatmen -
+  // fliesst in den Phasen-Hinweistext waehrend der Session ein (siehe
+  // resolveTechnique).
   var BREATH_METHOD = {
     box: { inhale: 'nose', exhale: 'nose' },
     fourSevenEight: { inhale: 'nose', exhale: 'mouth' },
@@ -770,12 +807,16 @@
     alternateNostril: { inhale: 'nose', exhale: 'nose' },
     bhramari: { inhale: 'nose', exhale: 'hum' },
     bellows: { inhale: 'nose', exhale: 'nose' },
+    sitali: { inhale: 'tongue', exhale: 'nose' },
+    lionsBreath: { inhale: 'nose', exhale: 'roar' },
     custom: { inhale: 'both', exhale: 'both' }
   };
   function breathHint(verb, method) {
     if (method === 'nose') return verb === 'inhale' ? 'Einatmen durch die Nase' : 'Ausatmen durch die Nase';
     if (method === 'mouth') return verb === 'inhale' ? 'Einatmen durch den Mund' : 'Hörbar ausatmen durch den Mund';
     if (method === 'hum') return 'Beim Ausatmen mit geschlossenem Mund summen';
+    if (method === 'tongue') return 'Einatmen durch die aufgerollte Zunge (oder durch die Zähne)';
+    if (method === 'roar') return 'Kräftig "Ha" ausatmen, Zunge weit raus';
     return verb === 'inhale' ? 'Einatmen, Nase oder Mund' : 'Ausatmen, Nase oder Mund';
   }
   // Wechselatmung: Seite alterniert pro Runde statt pro Technik-Definition,
@@ -797,6 +838,8 @@
     alternateNostril: { id: 'alternateNostril', label: 'Wechselatmung', seconds: { inhale: 4, hold1: 2, exhale: 4, hold2: 0 }, editable: false, alternates: true },
     bhramari: { id: 'bhramari', label: 'Bienenatmung', seconds: { inhale: 4, hold1: 0, exhale: 6, hold2: 0 }, editable: false },
     bellows: { id: 'bellows', label: 'Bellows Breath', seconds: { inhale: 1, hold1: 0, exhale: 1, hold2: 0 }, editable: false },
+    sitali: { id: 'sitali', label: 'Sitali (Kühlatmung)', seconds: { inhale: 5, hold1: 0, exhale: 5, hold2: 0 }, editable: false },
+    lionsBreath: { id: 'lionsBreath', label: 'Löwenatem', seconds: { inhale: 4, hold1: 0, exhale: 2, hold2: 0 }, editable: false },
     custom: { id: 'custom', label: 'Eigenes Muster', seconds: null, editable: true }
   };
 
@@ -993,7 +1036,7 @@
       ? '<div class="streak-badge">🔥 <span class="n">' + cur + '</span> Tage Streak</div>'
       : '';
 
-    ['box', 'fourSevenEight', 'coherent', 'physiologicalSigh', 'extendedExhale', 'alternateNostril', 'bhramari', 'bellows'].forEach(function (id) {
+    ['box', 'fourSevenEight', 'coherent', 'physiologicalSigh', 'extendedExhale', 'alternateNostril', 'bhramari', 'bellows', 'sitali', 'lionsBreath'].forEach(function (id) {
       var tech = resolveTechnique(id);
       document.getElementById('tc-rounds-' + id).textContent = String(tech.rounds);
       document.getElementById('tc-duration-' + id).textContent = '≈ ' + formatClock(techniqueTotalSeconds(tech));
@@ -1027,7 +1070,7 @@
     box: { min: 1, max: 20 }, fourSevenEight: { min: 1, max: 20 }, coherent: { min: 1, max: 30 },
     physiologicalSigh: { min: 1, max: 10 }, extendedExhale: { min: 1, max: 20 },
     alternateNostril: { min: 2, max: 20 }, bhramari: { min: 1, max: 20 },
-    bellows: { min: 5, max: 40 }
+    bellows: { min: 5, max: 40 }, sitali: { min: 3, max: 20 }, lionsBreath: { min: 3, max: 15 }
   };
   document.querySelectorAll('[data-round-step]').forEach(function (btn) {
     btn.addEventListener('click', function () {

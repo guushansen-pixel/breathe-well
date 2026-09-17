@@ -73,6 +73,14 @@ nach `inhale`, einzig für den Physiological Sigh gebraucht):
 - **Bellows Breath** (Bhastrika): 1s ein / 1s aus, 20 Runden - energetisierend
   statt beruhigend, füllt die "Energize"-Kategorie, die sonst in keiner
   anderen Technik hier vorkommt. Immer im Sitzen, bei Schwindel abbrechen.
+- **Sitali** (Kühlatmung): 5s ein durch die aufgerollte Zunge (Alternative
+  Sitkari: durch die Zähne) / 5s aus durch die Nase - klassische
+  Kühl-Pranayama, füllt die "Hitze/Anspannung abkühlen"-Nische, die sonst
+  fehlt.
+- **Löwenatem** (Simhasana): 4s ein durch die Nase / 2s kräftiges "Ha" durch
+  den Mund mit rausgestreckter Zunge - löst Kiefer-/Halsspannung und baut
+  Frust ab; anderer Mechanismus als Bellows (Ausdruck/Lösen statt
+  Stoffwechsel-Stimulation), deshalb kein Duplikat.
 
 `resolveTechnique(id)` löst das auf ein Phasen-Array auf; die
 Session-Engine (`startSession`/`tickActive`/`advancePhase`) kennt keine
@@ -231,6 +239,11 @@ hängt von der Technik ab:
 Kein eigenes Session-Datenmodell, keine Glättung über mehrere Sessions -
 nur ein direkter Nudge fürs nächste Mal, über dieselben Werte, die auch die
 Home-Karten-Stepper/der Custom-Editor schon bedienen.
+
+**Stage 2c - Blind Spots** (gebaut, noch nicht geräte-getestet): Sitali
+(Kühlatmung) und Löwenatem ergänzt (siehe "Technik-Engine" oben) - zwei
+Kategorien geschlossen, die trotz Stage 2/2b noch fehlten (Kühlung,
+stimmlicher Spannungslöser).
 
 ## Kurse/Programme (Stage 5) - Brainstorm, noch nicht gebaut
 
