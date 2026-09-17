@@ -478,6 +478,10 @@
 
     <div class="card">
       <div class="toggle-row">
+        <span>Ton bei Phasenwechsel</span>
+        <label class="switch"><input type="checkbox" id="toggle-sound"><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
         <span>Vibration bei Phasenwechsel</span>
         <label class="switch"><input type="checkbox" id="toggle-vibration"><span class="slider"></span></label>
       </div>
@@ -615,6 +619,7 @@
     theme: 'system',
     lastTechniqueId: null,
     vibrationOn: true,
+    soundOn: true,
     reminderOn: false,
     reminderTime: '08:00',
     techniqueRounds: { box: 6, fourSevenEight: 4, coherent: 10, physiologicalSigh: 5, extendedExhale: 8, alternateNostril: 8, bhramari: 6, bellows: 20, sitali: 10, lionsBreath: 7 },
@@ -684,6 +689,46 @@
   function dayKeyToLocalDate(k) {
     var p = k.split('-').map(Number);
     return new Date(p[0], p[1] - 1, p[2]);
+  }
+
+  // ---------- Audio ----------
+  // Wie bei ice-breath: alle Toene werden zur Laufzeit per Web Audio API
+  // synthetisiert, keine Audiodateien im Repo/in der APK. audioInit() muss
+  // aus einer echten Nutzergeste heraus laufen (Browser-Autoplay-Policy) -
+  // deshalb der Aufruf in startSession(), das immer per Klick ausgeloest wird.
+  var audioCtx = null, masterGain = null;
+  function audioInit() {
+    if (audioCtx) { if (audioCtx.state === 'suspended') audioCtx.resume(); return; }
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.5;
+      masterGain.connect(audioCtx.destination);
+    } catch (e) {}
+  }
+  function tone(f0, f1, dur, type, vol) {
+    if (!audioCtx || !settings.soundOn) return;
+    try {
+      var osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+      osc.type = type || 'sine';
+      var now = audioCtx.currentTime;
+      osc.frequency.setValueAtTime(f0, now);
+      if (f1 && f1 !== f0) osc.frequency.linearRampToValueAtTime(f1, now + dur);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(vol || 0.5, now + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      osc.connect(gain); gain.connect(masterGain);
+      osc.start(now); osc.stop(now + dur + 0.05);
+    } catch (e) {}
+  }
+  function cueInhale() { tone(330, 440, 0.3, 'sine', 0.45); }
+  function cueExhale() { tone(440, 300, 0.35, 'sine', 0.4); }
+  function cueHoldStart() { tone(220, 180, 0.6, 'sine', 0.45); }
+  function cueSessionDone() { tone(660, 220, 0.9, 'sine', 0.55); }
+  function audioForPhase(phase) {
+    if (phase.key === 'inhale' || phase.key === 'inhale2') cueInhale();
+    else if (phase.key === 'exhale') cueExhale();
+    else cueHoldStart();
   }
 
   // ---------- Vibration ----------
@@ -913,6 +958,7 @@
       startedAt: Date.now(), phaseStartEpoch: Date.now(),
       _lastReadyShown: null, _lastCountShown: null
     };
+    audioInit();
     requestWakeLock();
     document.getElementById('ready-technique-label').textContent = tech.label;
     document.getElementById('screen-session').className = 'screen active stage-ready';
@@ -955,6 +1001,7 @@
     document.getElementById('phase-hint').textContent = hint;
     document.getElementById('pacer-circle').classList.toggle('empty', phase.visual === 'shrink' || phase.visual === 'hold-contracted');
     vibrateForPhase(phase);
+    audioForPhase(phase);
   }
 
   function tickActive() {
@@ -993,6 +1040,7 @@
   function finishSession() {
     releaseWakeLock();
     vibrate(VIB.sessionDone);
+    cueSessionDone();
     var endedAt = Date.now();
     var record = {
       techniqueId: session.techniqueId,
@@ -1130,6 +1178,7 @@
     document.querySelectorAll('[data-theme-choice]').forEach(function (btn) {
       btn.classList.toggle('active', btn.getAttribute('data-theme-choice') === settings.theme);
     });
+    document.getElementById('toggle-sound').checked = settings.soundOn;
     document.getElementById('toggle-vibration').checked = settings.vibrationOn;
     document.getElementById('toggle-reminder').checked = settings.reminderOn;
     document.getElementById('reminder-time').value = settings.reminderTime;
@@ -1138,6 +1187,10 @@
       ? 'Braucht einmalig deine Bestätigung für Benachrichtigungen.'
       : 'Erinnert dich einmal täglich ans Üben.';
   }
+  document.getElementById('toggle-sound').addEventListener('change', function (e) {
+    settings.soundOn = e.target.checked;
+    persistSettings();
+  });
   document.getElementById('toggle-vibration').addEventListener('change', function (e) {
     settings.vibrationOn = e.target.checked;
     persistSettings();

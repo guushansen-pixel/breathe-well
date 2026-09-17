@@ -179,6 +179,15 @@ bei Halten-Phasen, langes Abschluss-Muster bei Session-Ende (`VIB`-Tabelle +
 `vibrateForPhase()`), per Toggle in den Einstellungen abschaltbar (Default
 an). Nutzt dieselbe `navigator.vibrate()`-API wie ice-breath.
 
+**Stage 7 - Audio**: wie bei ice-breath per Web Audio API zur Laufzeit
+synthetisierte Töne, keine Audiodateien - aufsteigender Ton bei Einatmen,
+absteigender bei Ausatmen, tieferer Ton bei Halten-Phasen
+(`cueInhale`/`cueExhale`/`cueHoldStart`/`cueSessionDone`, `audioForPhase()`
+parallel zu `vibrateForPhase()`), eigener Toggle "Ton bei Phasenwechsel"
+(Default an). `audioInit()` erzeugt den `AudioContext` in `startSession()` -
+muss aus einer echten Nutzergeste laufen (Browser-Autoplay-Policy), Klick
+auf "Starten" erfüllt das.
+
 Stage 2 + 3 device-getestet auf dem Pixel 11 Pro, vom Nutzer bestätigt
 ("klappt gut").
 
@@ -196,8 +205,8 @@ eingebaut - das ist architektonisch [ice-breath](../ice-breath)s Job (offene,
 nutzerbeendete Halte-Phasen + Bestzeiten-Tracking), nicht diese fest
 getaktete Engine.
 
-Audio ist als Nächstes dran, sobald es getestet werden kann (verschoben,
-weil beim Bauen "alle schlafen").
+Audio (Stage 7) ist gebaut, siehe oben - noch nicht mit echtem Ton auf dem
+Gerät gehört (nur im Browser auf Fehlerfreiheit geprüft).
 
 **Review-Fixes (v1.7, 2026-09-15, im Browser verifiziert)**: Physiological
 Sigh - der Kreis springt zwischen Einatmen und Nachatmen nicht mehr auf klein
@@ -269,6 +278,8 @@ aber bewusst noch nicht implementiert:
 
 ## Bewusst zurückgestellt
 
-Audio-Cues/Sprachführung, geführte Programme/Kurse (siehe Brainstorm oben),
-ein Technik-Builder über die vier Zahlenfelder hinaus, Wim Hof (das deckt
-ice-breath ab).
+Gesprochene Sprachführung (Audio-Cues sind seit Stage 7 drin, echte
+Stimmaufnahmen wären ein eigener, viel größerer Schritt), geführte
+Programme/Kurse (siehe Brainstorm oben, optional - evtl. fällt uns noch was
+Besseres ein), ein Technik-Builder über die vier Zahlenfelder hinaus, Wim
+Hof (das deckt ice-breath ab).
