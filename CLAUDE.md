@@ -1,7 +1,9 @@
 # Breathe Well
 
-Offline Android-App mit mehreren Atemtechniken (Box Breathing, 4-7-8,
-Coherent Breathing, Custom), reine Web-App in einer Datei, die per
+Offline Android-App mit elf Atemtechniken (Box Breathing, 4-7-8, Coherent,
+Physiological Sigh, Verlaengertes Ausatmen, Wechselatmung, Bienenatmung,
+Bellows, Sitali, Loewenatem, Eigenes Muster) plus Vibration, Ton, taeglicher
+Erinnerung und adaptiver Rundenzahl, reine Web-App in einer Datei, die per
 [apk-builder](../apk-builder) zur APK wird. Details zu Technik-Engine,
 Datenmodell und Streak-Logik stehen in [README.md](README.md) - dort
 nachlesen statt hier duplizieren.
@@ -15,9 +17,12 @@ Settings, Verlauf, Persistenz nach Reload). `?fast=1` an die URL anhängen,
 um alle Zeit-Konstanten durch 10 zu teilen und schnell durchzuklicken.
 
 APK bauen - **nicht** direkt `apk-builder\new-app.ps1`/`build-apk.ps1`
-aufrufen, sondern immer über den eigenen Wrapper, der Portrait-Lock und
-Keep-Screen-On nachpatcht (apk-builder unterstützt beides nicht nativ, und
-`apps\BreatheWell` wird bei jedem `-Force`-Lauf komplett neu generiert):
+aufrufen, sondern immer über den eigenen Wrapper, der Portrait-Lock,
+Keep-Screen-On, den Predictive-Back-Handler und die Erinnerungs-Brücke
+nachpatcht (`apps\BreatheWell` wird bei jedem `-Force`-Lauf komplett neu
+generiert). Seit 2026-09-24 kann apk-builder die ersten drei auch selbst
+(`-Portrait -KeepScreenOn`, Back-Callback im Template); der Wrapper bleibt
+trotzdem nötig, wegen der Erinnerungs-Brücke:
 
 ```powershell
 cd "D:\claude code projects\breathe-well"
@@ -45,15 +50,19 @@ bei geschlossener App, übersteht einen Geräte-Neustart).
   Versionsnummer statt stillschweigender Migration.
 - Nur `finishSession()` schreibt einen Session-Record - `cancelSession()`
   nie. Die Streak-Logik baut genau darauf auf (siehe README).
-- Neue Atemtechnik hinzufügen: nur ein Eintrag in `TECHNIQUES` (Sekunden je
-  Phase + Default-Rundenzahl) plus die zugehörigen Home-Karte/Strings im
-  Markup - die Session-Engine selbst braucht keine technik-spezifische
-  Verzweigung.
+- Neue Atemtechnik hinzufügen: ein Eintrag in `TECHNIQUES` (Sekunden je
+  Phase), die Default-Rundenzahl in `settings.techniqueRounds`, die Grenzen in
+  `ROUNDS_META`, Nase/Mund in `BREATH_METHOD` plus die zugehörige
+  Home-Karte/Strings im Markup - die Session-Engine selbst braucht keine
+  technik-spezifische Verzweigung.
 - Harter Anspruch: kein Netzwerkzugriff, keine Gerätedaten außer dem, was
   die App selbst braucht. `new-app.ps1` wird ohne `-Online` aufgerufen.
-- Kein Audio bisher (bewusst zurückgestellt, siehe README) - kein
-  WebGL für den Pacer (siehe [hopper](../hopper): auf echtem Gerät stark
-  geruckelt trotz sauberem Desktop-Test).
+- Audio nur als zur Laufzeit synthetisierte Töne (Web Audio API, seit
+  Stage 7), keine Audiodateien; `audioInit()` muss aus einer echten
+  Nutzergeste laufen ("Starten"). Gesprochene Sprachführung ist bewusst
+  zurückgestellt (siehe README). Kein WebGL für den Pacer (siehe
+  [hopper](../hopper): auf echtem Gerät stark geruckelt trotz sauberem
+  Desktop-Test).
 - Die Erinnerungs-Java-Klassen liegen als echte Quelldateien unter
   `android-src/*.java` (nicht als PowerShell-String-Patch) und werden von
   `build.ps1` unverändert ins generierte Projekt kopiert - bei Änderungen
