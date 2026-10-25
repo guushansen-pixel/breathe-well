@@ -217,6 +217,13 @@ Ausatmen behält 1:2 (siehe unten); höchstens ein Verlaufseintrag "weg vom
 Home" (`goHome()` baut ihn per `history.back()` ab) - vorher musste man auf
 dem Home mehrfach Zurück drücken, bis die App schließt.
 
+**Edge-to-Edge (v1.10, versionCode 11, 2026-10-25)**: ab targetSdk 35 liegt
+die App hinter Status- und Navigationsleiste, `env(safe-area-inset-*)`
+liefert im WebView 0. `.screen` und `.session-top` polstern jetzt mit
+`var(--sat)` / `var(--sab)`; die echten Werte setzt das apk-builder-Template
+(siehe [apk-builder/CLAUDE.md](../apk-builder/CLAUDE.md)). Im Browser mit
+simulierten Leisten geprüft, noch nicht auf dem Gerät.
+
 ## Adaptive Rundenzahl / Sekunden (Stage 6)
 
 Auf dem Summary-Screen fragt "Wie war die Session?" (zu leicht / passt genau

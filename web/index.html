@@ -6,6 +6,9 @@
 <title>Breathe Well</title>
 <style>
   :root {
+    /* Hoehe von Status-/Navigationsleiste; in der APK setzt das apk-builder-Template die echten Werte (Edge-to-Edge ab targetSdk 35). */
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
     --bg: #140F29;
     --bg2: #1B1440;
     --fg: #EDEAFB;
@@ -45,8 +48,8 @@
     display: none; flex-direction: column; height: 100%; overflow-y: auto;
     touch-action: pan-y;
     padding: 20px;
-    padding-top: calc(36px + env(safe-area-inset-top, 0px));
-    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    padding-top: calc(36px + var(--sat));
+    padding-bottom: calc(20px + var(--sab));
   }
   .screen.active { display: flex; }
 
@@ -142,7 +145,7 @@
   .session-top {
     display: flex; justify-content: space-between; align-items: flex-start;
     padding: 18px 18px 0;
-    padding-top: calc(18px + env(safe-area-inset-top, 0px));
+    padding-top: calc(18px + var(--sat));
   }
   .session-top button { background: rgba(0,0,0,0.28); color: rgba(255,255,255,0.92); border: none; border-radius: 10px; padding: 10px 14px; font-size: 0.9em; }
   .round-indicator { font-size: 1.05em; color: rgba(255,255,255,0.85); padding-top: 12px; }
