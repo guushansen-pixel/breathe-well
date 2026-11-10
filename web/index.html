@@ -776,7 +776,12 @@
     if (wakeLock) { try { wakeLock.release(); } catch (e) {} wakeLock = null; }
   }
   document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState === 'visible' && state.screen === 'session' && session) requestWakeLock();
+    if (document.visibilityState === 'visible' && state.screen === 'session' && session) {
+      requestWakeLock();
+      // Nach Anruf/App-Wechsel kann der AudioContext suspendiert sein -
+      // ohne resume() blieben die Toene fuer den Rest der Session stumm.
+      if (audioCtx && audioCtx.state !== 'running') { try { audioCtx.resume(); } catch (e) {} }
+    }
   });
 
   // ---------- Confirm dialog ----------
@@ -1344,6 +1349,10 @@
   document.getElementById('btn-summary-done').addEventListener('click', goHome);
 
   // ---------- Init ----------
+  // Erinnerung bei jedem Start neu einplanen: Android verwirft die Alarme
+  // einer App beim Update, und sonst bliebe sie bis zum naechsten
+  // Geraete-Neustart (BootReceiver) stumm. Idempotent, kostet nichts.
+  applyReminderSchedule();
   renderHome();
 })();
 </script>
