@@ -71,3 +71,8 @@ bei geschlossener App, übersteht einen Geräte-Neustart).
 ## Aktueller Stand
 
 Siehe "Aktueller Stand" in [README.md](README.md).
+
+
+v1.11 (code 12, 2026-11-10), Ergebnis der Code-Durchsicht: AudioContext wird beim Zurueckkehren geweckt; `applyReminderSchedule()` laeuft bei jedem App-Start (Android verwirft Alarme beim App-Update). Release-APK liegt in `apk-builder\out`. Neu gebaut mit dem
+apk-builder-Template vom selben Tag (Renderer-Absturz beendet die App nicht mehr).
+Am Geraet noch nicht getestet.
